@@ -4,7 +4,7 @@ import { findById as findAccount } from '../accounts/repository';
 
 const router = Router({ mergeParams: true });
 
-router.get('/', (req, res) => {
+router.get<{ accountId: string }>('/', (req, res) => {
     const accountId = parseInt(req.params.accountId, 10);
     if (!findAccount(accountId)) {
         res.status(404).json({ error: 'account not found' });
@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
     res.json(repo.findByAccount(accountId));
 });
 
-router.post('/', (req, res) => {
+router.post<{ accountId: string }>('/', (req, res) => {
     const accountId = parseInt(req.params.accountId, 10);
     if (!findAccount(accountId)) {
         res.status(404).json({ error: 'account not found' });
@@ -56,7 +56,7 @@ router.post('/', (req, res) => {
     res.status(201).json(transaction);
 });
 
-router.get('/:id', (req, res) => {
+router.get<{ accountId: string; id: string }>('/:id', (req, res) => {
     const id = parseInt(req.params.id, 10);
     const transaction = repo.findById(id);
     if (!transaction || transaction.account_id !== parseInt(req.params.accountId, 10)) {
@@ -66,7 +66,7 @@ router.get('/:id', (req, res) => {
     res.json(transaction);
 });
 
-router.put('/:id', (req, res) => {
+router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
     const accountId = parseInt(req.params.accountId, 10);
     const id = parseInt(req.params.id, 10);
 
@@ -118,7 +118,7 @@ router.put('/:id', (req, res) => {
     res.json(updated);
 });
 
-router.delete('/:id', (req, res) => {
+router.delete<{ accountId: string; id: string }>('/:id', (req, res) => {
     const accountId = parseInt(req.params.accountId, 10);
     const id = parseInt(req.params.id, 10);
 
