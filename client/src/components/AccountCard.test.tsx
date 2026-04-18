@@ -11,10 +11,15 @@ const account: DashboardAccount = {
     recent_transactions: [],
 };
 
-function renderCard(onEdit = vi.fn(), onDelete = vi.fn()) {
+function renderCard(onEdit = vi.fn(), onDelete = vi.fn(), onAddTransaction = vi.fn()) {
     return render(
         <MemoryRouter>
-            <AccountCard account={account} onEdit={onEdit} onDelete={onDelete} />
+            <AccountCard 
+                account={account} 
+                onEdit={onEdit} 
+                onDelete={onDelete}
+                 onAddTransaction={onAddTransaction}
+            />
         </MemoryRouter>,
     );
 }

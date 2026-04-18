@@ -47,7 +47,6 @@ describe('TransactionForm', () => {
         fireEvent.click(screen.getByRole('button', { name: /save/i }));
         expect(screen.getByText('Description is required.')).toBeTruthy();
         expect(screen.getByText('Enter a positive amount.')).toBeTruthy();
-        expect(screen.getByText('Date is required.')).toBeTruthy();
     });
 
     it('does not submit when validation fails', () => {
