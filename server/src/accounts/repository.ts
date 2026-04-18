@@ -1,0 +1,51 @@
+import db from '../db';
+
+export interface Account {
+    id: number;
+    name: string;
+    created_at: string;
+    deleted_at: string | null;
+}
+
+export function findAll(): Account[] {
+    return db.prepare('SELECT * FROM accounts WHERE deleted_at IS NULL ORDER BY name').all() as Account[];
+}
+
+export function findById(id: number): Account | undefined {
+    return db
+        .prepare('SELECT * FROM accounts WHERE id = ? AND deleted_at IS NULL')
+        .get(id) as Account | undefined;
+}
+
+export function create(name: string): Account {
+    const result = db.prepare('INSERT INTO accounts (name) VALUES (?)').run(name);
+    return findById(result.lastInsertRowid as number)!;
+}
+
+export function update(id: number, name: string): Account | undefined {
+    db.prepare('UPDATE accounts SET name = ? WHERE id = ? AND deleted_at IS NULL').run(name, id);
+    return findById(id);
+}
+
+export function softDelete(id: number): boolean {
+    const softDeleteAccounts = db.prepare(
+        'UPDATE accounts SET deleted_at = datetime(\'now\') WHERE id = ? AND deleted_at IS NULL',
+    );
+    const softDeleteTransactions = db.prepare(
+        'UPDATE transactions SET deleted_at = datetime(\'now\') WHERE account_id = ? AND deleted_at IS NULL',
+    );
+    const softDeleteAttachments = db.prepare(`
+        UPDATE attachments SET deleted_at = datetime('now')
+        WHERE transaction_id IN (SELECT id FROM transactions WHERE account_id = ?)
+        AND deleted_at IS NULL
+    `);
+
+    const run = db.transaction((accountId: number) => {
+        softDeleteAttachments.run(accountId);
+        softDeleteTransactions.run(accountId);
+        const result = softDeleteAccounts.run(accountId);
+        return result.changes > 0;
+    });
+
+    return run(id) as boolean;
+}
