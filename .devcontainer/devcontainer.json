@@ -1,0 +1,35 @@
+{
+    "name": "Sid",
+    "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+    "forwardPorts": [3000, 5173],
+    "portsAttributes": {
+        "3000": {
+            "label": "API server",
+            "onAutoForward": "notify"
+        },
+        "5173": {
+            "label": "Vite dev server",
+            "onAutoForward": "openBrowser"
+        }
+    },
+    "mounts": [
+        "source=sid-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
+    ],
+    "postCreateCommand": "sudo chown -R $(whoami) node_modules && npm install",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "ms-vscode.vscode-typescript-next"
+            ],
+            "settings": {
+                "editor.defaultFormatter": "esbenp.prettier-vscode",
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.fixAll.eslint": "explicit"
+                }
+            }
+        }
+    }
+}
