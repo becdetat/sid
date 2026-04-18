@@ -30,7 +30,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     const [type, setType] = useState<'income' | 'expense'>(initial?.type ?? 'expense');
     const [description, setDescription] = useState(initial?.description ?? '');
     const [amount, setAmount] = useState(initial ? centsToDisplay(initial.amount_cents) : '');
-    const [date, setDate] = useState(initial?.date ?? '');
+    const [date, setDate] = useState(initial?.date ?? new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState(initial?.notes ?? '');
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
