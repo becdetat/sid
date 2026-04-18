@@ -5,6 +5,7 @@ import path from 'path';
 import './db';
 import accountRoutes from './accounts/routes';
 import transactionRoutes from './transactions/routes';
+import { txAttachmentRouter, attachmentRouter } from './attachments/routes';
 
 const app = express();
 const PORT = 3000;
@@ -18,6 +19,8 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/accounts', accountRoutes);
 app.use('/api/accounts/:accountId/transactions', transactionRoutes);
+app.use('/api/transactions/:txId/attachments', txAttachmentRouter);
+app.use('/api/attachments', attachmentRouter);
 
 const clientDist = path.resolve(__dirname, '../../client/dist');
 if (fs.existsSync(clientDist)) {

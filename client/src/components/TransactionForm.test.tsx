@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TransactionForm from './TransactionForm';
 import type { Transaction } from '../types/transaction';
 
@@ -16,19 +17,24 @@ const existing: Transaction = {
     deleted_at: null,
 };
 
+function wrap(ui: React.ReactElement) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
 describe('TransactionForm', () => {
     it('renders "New transaction" title when no initial', () => {
-        render(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
         expect(screen.getByText('New transaction')).toBeTruthy();
     });
 
     it('renders "Edit transaction" title when initial provided', () => {
-        render(<TransactionForm initial={existing} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        wrap(<TransactionForm initial={existing} onSubmit={vi.fn()} onCancel={vi.fn()} />);
         expect(screen.getByText('Edit transaction')).toBeTruthy();
     });
 
     it('pre-populates fields from initial', () => {
-        render(<TransactionForm initial={existing} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        wrap(<TransactionForm initial={existing} onSubmit={vi.fn()} onCancel={vi.fn()} />);
         const inputs = screen.getAllByRole('textbox');
         const descInput = inputs.find(
             (el) => (el as HTMLInputElement).value === 'Coffee',
@@ -37,7 +43,7 @@ describe('TransactionForm', () => {
     });
 
     it('shows validation errors when submitted empty', () => {
-        render(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
         fireEvent.click(screen.getByRole('button', { name: /save/i }));
         expect(screen.getByText('Description is required.')).toBeTruthy();
         expect(screen.getByText('Enter a positive amount.')).toBeTruthy();
@@ -46,14 +52,14 @@ describe('TransactionForm', () => {
 
     it('does not submit when validation fails', () => {
         const onSubmit = vi.fn();
-        render(<TransactionForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+        wrap(<TransactionForm onSubmit={onSubmit} onCancel={vi.fn()} />);
         fireEvent.click(screen.getByRole('button', { name: /save/i }));
         expect(onSubmit).not.toHaveBeenCalled();
     });
 
     it('calls onSubmit with pre-filled values when editing', () => {
         const onSubmit = vi.fn();
-        render(<TransactionForm initial={existing} onSubmit={onSubmit} onCancel={vi.fn()} />);
+        wrap(<TransactionForm initial={existing} onSubmit={onSubmit} onCancel={vi.fn()} />);
 
         fireEvent.submit(document.querySelector('form')!);
 
@@ -64,18 +70,19 @@ describe('TransactionForm', () => {
                 type: 'expense',
                 date: '2024-01-15',
             }),
+            [],
         );
     });
 
     it('calls onCancel when cancel is clicked', () => {
         const onCancel = vi.fn();
-        render(<TransactionForm onSubmit={vi.fn()} onCancel={onCancel} />);
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={onCancel} />);
         fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
         expect(onCancel).toHaveBeenCalled();
     });
 
     it('toggles type between expense and income', () => {
-        render(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
         const incomeBtn = screen.getByRole('button', { name: /income/i });
         fireEvent.click(incomeBtn);
         expect(incomeBtn.className).toContain('bg-green-600');

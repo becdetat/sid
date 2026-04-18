@@ -10,6 +10,7 @@ import {
     deleteTransaction,
     type TransactionPayload,
 } from '../api/transactions';
+import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -42,22 +43,12 @@ export default function AccountDetail() {
 
     const createMutation = useMutation({
         mutationFn: (data: TransactionPayload) => createTransaction(accountId, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
-            setModal(null);
-            toast.success('Transaction added.');
-        },
         onError: () => toast.error('Failed to add transaction.'),
     });
 
     const updateMutation = useMutation({
         mutationFn: ({ id: txId, data }: { id: number; data: TransactionPayload }) =>
             updateTransaction(accountId, txId, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
-            setModal(null);
-            toast.success('Transaction updated.');
-        },
         onError: () => toast.error('Failed to update transaction.'),
     });
 
@@ -70,6 +61,39 @@ export default function AccountDetail() {
         },
         onError: () => toast.error('Failed to delete transaction.'),
     });
+
+    async function handleCreate(data: TransactionPayload, pendingFiles: File[]) {
+        const tx = await createMutation.mutateAsync(data);
+        queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+        if (pendingFiles.length > 0) {
+            try {
+                await uploadAttachments(tx.id, pendingFiles);
+            } catch {
+                setModal(null);
+                toast.warning('Transaction saved, but some attachments failed to upload.');
+                return;
+            }
+        }
+        setModal(null);
+        toast.success('Transaction added.');
+    }
+
+    async function handleUpdate(txId: number, data: TransactionPayload, pendingFiles: File[]) {
+        await updateMutation.mutateAsync({ id: txId, data });
+        queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+        if (pendingFiles.length > 0) {
+            try {
+                await uploadAttachments(txId, pendingFiles);
+                queryClient.invalidateQueries({ queryKey: ['attachments', txId] });
+            } catch {
+                setModal(null);
+                toast.warning('Transaction saved, but some attachments failed to upload.');
+                return;
+            }
+        }
+        setModal(null);
+        toast.success('Transaction updated.');
+    }
 
     if (accountLoading) {
         return <div className="p-8 text-sm text-gray-400">Loading…</div>;
@@ -140,7 +164,7 @@ export default function AccountDetail() {
 
             {modal?.type === 'create' && (
                 <TransactionForm
-                    onSubmit={(data) => createMutation.mutate(data)}
+                    onSubmit={(data, files) => handleCreate(data, files)}
                     onCancel={() => setModal(null)}
                 />
             )}
@@ -148,8 +172,8 @@ export default function AccountDetail() {
             {modal?.type === 'edit' && (
                 <TransactionForm
                     initial={modal.transaction}
-                    onSubmit={(data) =>
-                        updateMutation.mutate({ id: modal.transaction.id, data })
+                    onSubmit={(data, files) =>
+                        handleUpdate(modal.transaction.id, data, files)
                     }
                     onCancel={() => setModal(null)}
                 />

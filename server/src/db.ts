@@ -33,10 +33,17 @@ db.exec(`
         transaction_id INTEGER NOT NULL REFERENCES transactions(id),
         filename       TEXT NOT NULL,
         mime_type      TEXT NOT NULL,
+        size_bytes     INTEGER NOT NULL DEFAULT 0,
         data           BLOB NOT NULL,
         created_at     DATETIME NOT NULL DEFAULT (datetime('now')),
         deleted_at     DATETIME
     );
 `);
+
+try {
+    db.exec(`ALTER TABLE attachments ADD COLUMN size_bytes INTEGER NOT NULL DEFAULT 0`);
+} catch {
+    // column already exists
+}
 
 export default db;

@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import type { Transaction } from '../types/transaction';
+import AttachmentManager from './AttachmentManager';
+
+interface TransactionData {
+    description: string;
+    amount: number;
+    type: 'income' | 'expense';
+    date: string;
+    notes: string | null;
+}
 
 interface Props {
     initial?: Transaction;
-    onSubmit: (data: {
-        description: string;
-        amount: number;
-        type: 'income' | 'expense';
-        date: string;
-        notes: string | null;
-    }) => void;
+    onSubmit: (data: TransactionData, pendingFiles: File[]) => void;
     onCancel: () => void;
 }
 
@@ -30,6 +33,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     const [date, setDate] = useState(initial?.date ?? '');
     const [notes, setNotes] = useState(initial?.notes ?? '');
     const [errors, setErrors] = useState<FormErrors>({});
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
     function validate(): boolean {
         const next: FormErrors = {};
@@ -44,18 +48,21 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!validate()) return;
-        onSubmit({
-            description: description.trim(),
-            amount: parseFloat(amount),
-            type,
-            date,
-            notes: notes.trim() || null,
-        });
+        onSubmit(
+            {
+                description: description.trim(),
+                amount: parseFloat(amount),
+                type,
+                date,
+                notes: notes.trim() || null,
+            },
+            pendingFiles,
+        );
     }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <h2 className="text-lg font-semibold mb-4">
                     {initial ? 'Edit transaction' : 'New transaction'}
                 </h2>
@@ -160,6 +167,13 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                             onChange={(e) => setNotes(e.target.value)}
                         />
                     </div>
+
+                    {/* Attachments */}
+                    <AttachmentManager
+                        transactionId={initial?.id}
+                        pendingFiles={pendingFiles}
+                        onPendingFilesChange={setPendingFiles}
+                    />
 
                     <div className="flex justify-end gap-2">
                         <button
