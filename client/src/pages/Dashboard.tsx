@@ -5,14 +5,18 @@ import AccountCard from '../components/AccountCard';
 import AccountForm from '../components/AccountForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
+import TransactionForm from '../components/TransactionForm';
 import { getDashboard } from '../api/dashboard';
 import { createAccount, updateAccount, deleteAccount } from '../api/accounts';
+import { createTransaction, type TransactionPayload } from '../api/transactions';
+import { uploadAttachments } from '../api/attachments';
 import type { DashboardAccount } from '../types/dashboard';
 
 type Modal =
     | { type: 'create' }
     | { type: 'edit'; account: DashboardAccount }
     | { type: 'delete'; account: DashboardAccount }
+    | { type: 'add-transaction'; account: DashboardAccount }
     | null;
 
 export default function Dashboard() {
@@ -54,6 +58,29 @@ export default function Dashboard() {
         onError: () => toast.error('Failed to delete account.'),
     });
 
+    const addTransactionMutation = useMutation({
+        mutationFn: ({ accountId, data }: { accountId: number; data: TransactionPayload }) =>
+            createTransaction(accountId, data),
+        onError: () => toast.error('Failed to add transaction.'),
+    });
+
+    async function handleAddTransaction(data: TransactionPayload, pendingFiles: File[]) {
+        if (modal?.type !== 'add-transaction') return;
+        const tx = await addTransactionMutation.mutateAsync({ accountId: modal.account.id, data });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        if (pendingFiles.length > 0) {
+            try {
+                await uploadAttachments(tx.id, pendingFiles);
+            } catch {
+                setModal(null);
+                toast.warning('Transaction saved, but some attachments failed to upload.');
+                return;
+            }
+        }
+        setModal(null);
+        toast.success('Transaction added.');
+    }
+
     return (
         <div className="p-8 max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -94,6 +121,7 @@ export default function Dashboard() {
                             account={account}
                             onEdit={(a) => setModal({ type: 'edit', account: a })}
                             onDelete={(a) => setModal({ type: 'delete', account: a })}
+                            onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
                         />
                     ))}
                 </div>
@@ -120,6 +148,13 @@ export default function Dashboard() {
                 <ConfirmDialog
                     message={`Delete "${modal.account.name}"? This will also delete all transactions and attachments.`}
                     onConfirm={() => deleteMutation.mutate(modal.account.id)}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+
+            {modal?.type === 'add-transaction' && (
+                <TransactionForm
+                    onSubmit={handleAddTransaction}
                     onCancel={() => setModal(null)}
                 />
             )}

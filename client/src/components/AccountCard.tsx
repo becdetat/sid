@@ -7,6 +7,7 @@ interface Props {
     account: DashboardAccount;
     onEdit: (account: DashboardAccount) => void;
     onDelete: (account: DashboardAccount) => void;
+    onAddTransaction: (account: DashboardAccount) => void;
 }
 
 function balanceClass(cents: number): string {
@@ -15,7 +16,7 @@ function balanceClass(cents: number): string {
     return 'text-gray-500';
 }
 
-export default function AccountCard({ account, onEdit, onDelete }: Props) {
+export default function AccountCard({ account, onEdit, onDelete, onAddTransaction }: Props) {
     return (
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
@@ -71,12 +72,21 @@ export default function AccountCard({ account, onEdit, onDelete }: Props) {
                 </ul>
             )}
 
-            <Link
-                to={`/accounts/${account.id}`}
-                className="text-xs text-blue-600 hover:underline"
-            >
-                View all transactions →
-            </Link>
+            <div className="flex items-center justify-between">
+                <Link
+                    to={`/accounts/${account.id}`}
+                    className="text-xs text-blue-600 hover:underline"
+                >
+                    View all transactions →
+                </Link>
+                <button
+                    aria-label={`Add transaction to ${account.name}`}
+                    onClick={() => onAddTransaction(account)}
+                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                    + Add transaction
+                </button>
+            </div>
         </div>
     );
 }
