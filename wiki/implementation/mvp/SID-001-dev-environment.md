@@ -2,7 +2,7 @@
 
 ## Summary
 
-Scaffold the monorepo with `/client` (Vite + React + TypeScript + TailwindCSS) and `/server` (Node + Express + TypeScript + better-sqlite3). Wire up a single dev command that runs both concurrently, and initialise the SQLite schema on server start.
+Scaffold the monorepo with `/client` (Vite + React + TypeScript + TailwindCSS) and `/server` (Node + Express + TypeScript + better-sqlite3). Wire up a single dev command that runs both concurrently, and initialise the SQLite schema on server start. Include setting up vitest for frontend tests and tap for backend tests, and ESLint and Prettier configured with the rules explained in AGENTS.md.
 
 ## User story
 
@@ -54,6 +54,8 @@ sequenceDiagram
 
 5. **Client scaffold** — `npm create vite@latest client -- --template react-ts`; install `tailwindcss`, `@tailwindcss/vite`; configure `vite.config.ts` with `/api` proxy to `http://localhost:3000`; add basic `App.tsx` placeholder.
 
-6. **`.gitignore`** — ensure `node_modules/`, `dist/`, `*.db`, `.env` are ignored at root level.
+6. **Tests and linting** - Install and configure vitest for frontend tests, tap for backend tests, and configure ESLine and Prettier with the rules explained in AGENTS.md. Add usage instructions to README.md.
 
-7. **Smoke test** — confirm `npm run dev` from root starts both processes, `GET /api/health` returns 200, and Vite loads in the browser.
+7. **`.gitignore`** — ensure `node_modules/`, `dist/`, `*.db`, `.env` are ignored at root level.
+
+8. **Smoke test** — confirm `npm run dev` from root starts both processes, `GET /api/health` returns 200, and Vite loads in the browser.
