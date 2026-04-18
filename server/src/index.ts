@@ -8,6 +8,7 @@ import transactionRoutes from './transactions/routes';
 import { txAttachmentRouter, attachmentRouter } from './attachments/routes';
 import dashboardRoutes from './dashboard/routes';
 import exportRoutes from './export/routes';
+import importRoutes from './import/routes';
 
 const app = express();
 const PORT = 3000;
@@ -22,6 +23,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/accounts/:id/export', exportRoutes);
 app.use('/api/accounts', accountRoutes);
+app.use('/api/accounts/:accountId/transactions/import', importRoutes);
 app.use('/api/accounts/:accountId/transactions', transactionRoutes);
 app.use('/api/transactions/:txId/attachments', txAttachmentRouter);
 app.use('/api/attachments', attachmentRouter);

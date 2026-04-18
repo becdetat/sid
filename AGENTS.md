@@ -83,30 +83,29 @@ Surface API and runtime errors to the user via **toasts**. Do not use inline err
 
 ---
 
-## Testing
+## Testing and building
 
-### Frontend — Vitest
+Whenever a change is made to the frontend or backend, the project should be built and tests run. If there are any errors, fix them and iterate.
 
-Run frontend tests with:
+```sh
+# Frontend
+cd frontend
+npm run build
+npm run test
 
-```bash
-npm run test --workspace=client
-```
+cd ..
 
-### Backend — tap
-
-Run backend tests with:
-
-```bash
-npm run test --workspace=server
-```
+# Backend
+cd backend
+npm run build
+npm run test
 
 ### Policy
 
 - All new features must include tests.
 - All changes that touch existing behaviour must update or extend existing tests.
-- Failing tests must be fixed before a feature is considered complete.
-- ESLint and Prettier must pass before committing.
+- Failing builds and tests must be fixed before a feature is considered complete.
+- ESLint and Prettier must pass before a feature is considered complete.
 
 ---
 

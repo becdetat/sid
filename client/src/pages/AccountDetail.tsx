@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -8,8 +8,10 @@ import {
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    importTransactions,
     type TransactionPayload,
 } from '../api/transactions';
+import { downloadImportTemplate } from '../utils/importTemplate';
 import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
 import TransactionForm from '../components/TransactionForm';
@@ -30,6 +32,8 @@ export default function AccountDetail() {
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [showExport, setShowExport] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const importInputRef = useRef<HTMLInputElement>(null);
 
     const { data: account, isLoading: accountLoading } = useQuery({
         queryKey: ['accounts', accountId],
@@ -97,6 +101,23 @@ export default function AccountDetail() {
         toast.success('Transaction updated.');
     }
 
+    async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';
+        setIsImporting(true);
+        try {
+            const { imported } = await importTransactions(accountId, file);
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            toast.success(`${imported} ${imported === 1 ? 'transaction' : 'transactions'} imported.`);
+        } catch (err: any) {
+            const message = err?.response?.data?.error ?? 'Failed to import transactions.';
+            toast.error(message);
+        } finally {
+            setIsImporting(false);
+        }
+    }
+
     if (accountLoading) {
         return <div className="p-8 text-sm text-gray-400">Loading…</div>;
     }
@@ -122,6 +143,26 @@ export default function AccountDetail() {
             </div>
 
             <div className="flex justify-end gap-2 mb-4">
+                <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={handleImport}
+                />
+                <button
+                    onClick={downloadImportTemplate}
+                    className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                    Download template
+                </button>
+                <button
+                    onClick={() => importInputRef.current?.click()}
+                    disabled={isImporting}
+                    className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isImporting ? 'Importing…' : 'Import CSV'}
+                </button>
                 <button
                     onClick={() => setShowExport(true)}
                     className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"

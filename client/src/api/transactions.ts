@@ -44,3 +44,13 @@ export async function updateTransaction(
 export async function deleteTransaction(accountId: number, id: number): Promise<void> {
     await axios.delete(`${base(accountId)}/${id}`);
 }
+
+export async function importTransactions(
+    accountId: number,
+    file: File,
+): Promise<{ imported: number }> {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await axios.post<{ imported: number }>(`${base(accountId)}/import`, form);
+    return data;
+}
