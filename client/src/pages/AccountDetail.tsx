@@ -14,6 +14,7 @@ import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ExportDialog from '../components/ExportDialog';
 import { formatCents } from '../utils/format';
 import type { Transaction } from '../types/transaction';
 
@@ -28,6 +29,7 @@ export default function AccountDetail() {
     const accountId = parseInt(id!, 10);
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
+    const [showExport, setShowExport] = useState(false);
 
     const { data: account, isLoading: accountLoading } = useQuery({
         queryKey: ['accounts', accountId],
@@ -119,7 +121,13 @@ export default function AccountDetail() {
                 </div>
             </div>
 
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4">
+                <button
+                    onClick={() => setShowExport(true)}
+                    className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                    Export CSV
+                </button>
                 <button
                     onClick={() => setModal({ type: 'create' })}
                     className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
@@ -176,6 +184,16 @@ export default function AccountDetail() {
                         handleUpdate(modal.transaction.id, data, files)
                     }
                     onCancel={() => setModal(null)}
+                />
+            )}
+
+            {showExport && (
+                <ExportDialog
+                    accountId={accountId}
+                    accountName={account.name}
+                    defaultFrom={transactions.at(-1)?.date ?? ''}
+                    defaultTo={new Date().toISOString().slice(0, 10)}
+                    onCancel={() => setShowExport(false)}
                 />
             )}
 
