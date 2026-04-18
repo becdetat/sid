@@ -137,3 +137,13 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# SQLite databases
+*.db
+
+# Docker
+docker/.env
+.tap
+__tests__
+*.db-shm
+*.db-wal

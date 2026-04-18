@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20+
+- **Node.js 20** (LTS). Node 24 is not supported — `better-sqlite3` has no pre-built binaries for it yet and requires a C++ build toolchain to compile from source. Use nvm to switch: `nvm install 20 && nvm use 20`.
 - npm 10+
 - Docker + Docker Compose (for running the containerised app locally)
 

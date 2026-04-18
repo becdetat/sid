@@ -1,0 +1,24 @@
+{
+    "name": "sid",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "client",
+        "server"
+    ],
+    "scripts": {
+        "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+        "lint": "npm run lint -w client && npm run lint -w server",
+        "format": "prettier --write \"client/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
+        "test": "npm run test -w client && npm run test -w server"
+    },
+    "devDependencies": {
+        "concurrently": "^9.0.0",
+        "prettier": "^3.4.0"
+    },
+    "overrides": {
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
+        "react-reconciler": "0.33.0"
+    }
+}
