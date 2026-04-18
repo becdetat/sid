@@ -2,9 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AccountCard from './AccountCard';
-import type { Account } from '../types/account';
+import type { DashboardAccount } from '../types/dashboard';
 
-const account: Account = { id: 1, name: 'Office', created_at: '2024-01-01', deleted_at: null };
+const account: DashboardAccount = {
+    id: 1,
+    name: 'Office',
+    balance_cents: -15000,
+    recent_transactions: [],
+};
 
 function renderCard(onEdit = vi.fn(), onDelete = vi.fn()) {
     return render(
@@ -32,5 +37,15 @@ describe('AccountCard', () => {
         renderCard(vi.fn(), onDelete);
         fireEvent.click(screen.getByRole('button', { name: /delete office/i }));
         expect(onDelete).toHaveBeenCalledWith(account);
+    });
+
+    it('shows balance colour-coded red for negative', () => {
+        renderCard();
+        expect(screen.getByText('-$150.00').className).toContain('text-red-600');
+    });
+
+    it('shows "No transactions yet" when recent_transactions is empty', () => {
+        renderCard();
+        expect(screen.getByText('No transactions yet')).toBeTruthy();
     });
 });

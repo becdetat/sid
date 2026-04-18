@@ -4,13 +4,15 @@ import { toast } from 'sonner';
 import AccountCard from '../components/AccountCard';
 import AccountForm from '../components/AccountForm';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { listAccounts, createAccount, updateAccount, deleteAccount } from '../api/accounts';
-import type { Account } from '../types/account';
+import SkeletonCard from '../components/SkeletonCard';
+import { getDashboard } from '../api/dashboard';
+import { createAccount, updateAccount, deleteAccount } from '../api/accounts';
+import type { DashboardAccount } from '../types/dashboard';
 
 type Modal =
     | { type: 'create' }
-    | { type: 'edit'; account: Account }
-    | { type: 'delete'; account: Account }
+    | { type: 'edit'; account: DashboardAccount }
+    | { type: 'delete'; account: DashboardAccount }
     | null;
 
 export default function Dashboard() {
@@ -18,14 +20,14 @@ export default function Dashboard() {
     const [modal, setModal] = useState<Modal>(null);
 
     const { data: accounts = [], isLoading } = useQuery({
-        queryKey: ['accounts'],
-        queryFn: listAccounts,
+        queryKey: ['dashboard'],
+        queryFn: getDashboard,
     });
 
     const createMutation = useMutation({
         mutationFn: (name: string) => createAccount(name),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             setModal(null);
             toast.success('Account created.');
         },
@@ -35,7 +37,7 @@ export default function Dashboard() {
     const updateMutation = useMutation({
         mutationFn: ({ id, name }: { id: number; name: string }) => updateAccount(id, name),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             setModal(null);
             toast.success('Account renamed.');
         },
@@ -45,7 +47,7 @@ export default function Dashboard() {
     const deleteMutation = useMutation({
         mutationFn: (id: number) => deleteAccount(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             setModal(null);
             toast.success('Account deleted.');
         },
@@ -53,9 +55,9 @@ export default function Dashboard() {
     });
 
     return (
-        <div className="p-8 max-w-xl mx-auto">
+        <div className="p-8 max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold">Accounts</h1>
+                <h1 className="text-2xl font-bold">Sid</h1>
                 <button
                     onClick={() => setModal({ type: 'create' })}
                     className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
@@ -64,22 +66,38 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            {isLoading && <p className="text-sm text-gray-400">Loading…</p>}
-
-            {!isLoading && accounts.length === 0 && (
-                <p className="text-sm text-gray-400">No accounts yet. Create one to get started.</p>
+            {isLoading && (
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3].map((i) => (
+                        <SkeletonCard key={i} />
+                    ))}
+                </div>
             )}
 
-            <div className="flex flex-col gap-2">
-                {accounts.map((account) => (
-                    <AccountCard
-                        key={account.id}
-                        account={account}
-                        onEdit={(a) => setModal({ type: 'edit', account: a })}
-                        onDelete={(a) => setModal({ type: 'delete', account: a })}
-                    />
-                ))}
-            </div>
+            {!isLoading && accounts.length === 0 && (
+                <div className="flex flex-col items-center gap-4 py-16 text-center">
+                    <p className="text-gray-500">No accounts yet.</p>
+                    <button
+                        onClick={() => setModal({ type: 'create' })}
+                        className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                        Create your first account
+                    </button>
+                </div>
+            )}
+
+            {!isLoading && accounts.length > 0 && (
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {accounts.map((account) => (
+                        <AccountCard
+                            key={account.id}
+                            account={account}
+                            onEdit={(a) => setModal({ type: 'edit', account: a })}
+                            onDelete={(a) => setModal({ type: 'delete', account: a })}
+                        />
+                    ))}
+                </div>
+            )}
 
             {modal?.type === 'create' && (
                 <AccountForm
