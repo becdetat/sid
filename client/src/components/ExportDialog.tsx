@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
     accountId: number;
@@ -12,6 +12,12 @@ export default function ExportDialog({ accountId, accountName, defaultFrom = '',
     const [from, setFrom] = useState(defaultFrom);
     const [to, setTo] = useState(defaultTo);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, [onCancel]);
 
     function handleDownload() {
         if (!from) { setError('Start date is required.'); return; }
@@ -27,45 +33,26 @@ export default function ExportDialog({ accountId, accountName, defaultFrom = '',
     }
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
-                <h2 className="text-lg font-semibold mb-4">
-                    Export — {accountName}
-                </h2>
-                <div className="flex flex-col gap-3 mb-4">
-                    <label className="flex flex-col gap-1 text-sm text-gray-700">
-                        From
-                        <input
-                            type="date"
-                            value={from}
-                            onChange={(e) => setFrom(e.target.value)}
-                            className="border border-gray-300 rounded px-3 py-2 text-sm"
-                        />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm text-gray-700">
-                        To
-                        <input
-                            type="date"
-                            value={to}
-                            onChange={(e) => setTo(e.target.value)}
-                            className="border border-gray-300 rounded px-3 py-2 text-sm"
-                        />
-                    </label>
-                </div>
-                {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
-                <div className="flex justify-end gap-2">
-                    <button
-                        onClick={onCancel}
-                        className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleDownload}
-                        className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                        Download
-                    </button>
+        <div className="sid-modal-overlay anim-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+            <div className="sid-modal anim-slide-up">
+                <div className="sid-modal-trim" />
+                <div className="sid-modal-body">
+                    <h2 className="sid-modal-title">Export — {accountName}</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">From</label>
+                            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="sid-input" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">To</label>
+                            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="sid-input" />
+                        </div>
+                    </div>
+                    {error && <p style={{ fontSize: '12px', color: 'var(--red)', marginBottom: '12px' }}>{error}</p>}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
+                        <button className="sid-btn sid-btn-primary" onClick={handleDownload}>Download</button>
+                    </div>
                 </div>
             </div>
         </div>

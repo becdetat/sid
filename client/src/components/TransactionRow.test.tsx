@@ -29,7 +29,13 @@ function renderRow(t = expense, onEdit = vi.fn(), onDelete = vi.fn()) {
     return render(
         <table>
             <tbody>
-                <TransactionRow transaction={t} onEdit={onEdit} onDelete={onDelete} />
+                <TransactionRow 
+                    transaction={t} 
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    isLast={false}
+                    gridTemplate="100px 150px 1fr 100px 100px"
+                />
             </tbody>
         </table>,
     );

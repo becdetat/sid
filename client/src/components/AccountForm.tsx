@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
     initialName?: string;
@@ -11,48 +11,43 @@ export default function AccountForm({ initialName = '', onSubmit, onCancel, titl
     const [name, setName] = useState(initialName);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, [onCancel]);
+
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!name.trim()) {
-            setError('Name is required.');
-            return;
-        }
+        if (!name.trim()) { setError('Name is required.'); return; }
         onSubmit(name.trim());
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                <h2 className="text-lg font-semibold mb-4">{title}</h2>
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Account name"
-                        value={name}
-                        onChange={(e) => {
-                            setName(e.target.value);
-                            setError('');
-                        }}
-                        autoFocus
-                    />
-                    {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-                    <div className="mt-4 flex justify-end gap-2">
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                            Save
-                        </button>
-                    </div>
-                </form>
+        <div className="sid-modal-overlay anim-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+            <div className="sid-modal anim-slide-up">
+                <div className="sid-modal-trim" />
+                <div className="sid-modal-body">
+                    <h2 className="sid-modal-title">{title}</h2>
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">Account name</label>
+                            <input
+                                type="text"
+                                className="sid-input"
+                                placeholder="e.g. Office expenses"
+                                value={name}
+                                onChange={(e) => { setName(e.target.value); setError(''); }}
+                                autoFocus
+                            />
+                            {error && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{error}</span>}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                            <button type="button" className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
+                            <button type="submit" className="sid-btn sid-btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

@@ -16,7 +16,22 @@ export default function App() {
                     <Route path="/accounts/:id" element={<AccountDetail />} />
                 </Routes>
             </BrowserRouter>
-            <Toaster richColors position="top-right" />
+            <Toaster
+                position="bottom-center"
+                toastOptions={{
+                    style: {
+                        background: 'var(--teak-dark)',
+                        color: 'var(--cream)',
+                        borderRadius: '99px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        fontFamily: 'var(--font-body)',
+                        border: 'none',
+                        padding: '10px 20px',
+                    },
+                    classNames: { error: 'sid-toast-error' },
+                }}
+            />
         </QueryClientProvider>
     );
 }
