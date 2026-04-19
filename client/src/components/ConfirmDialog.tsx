@@ -14,7 +14,7 @@ export default function ConfirmDialog({ message, onConfirm, onCancel }: Props) {
     }, [onCancel]);
 
     return (
-        <div className="sid-modal-overlay anim-fade" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+        <div className="sid-modal-overlay anim-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
             <div className="sid-modal anim-slide-up">
                 <div className="sid-modal-trim" />
                 <div className="sid-modal-body">
