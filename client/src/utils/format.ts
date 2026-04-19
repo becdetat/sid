@@ -12,6 +12,11 @@ export function formatDate(iso: string): string {
     return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+export function formatDateTime(iso: string): string {
+    const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export function balanceColor(cents: number): string {
     if (cents > 0) return 'var(--green)';
     if (cents < 0) return 'var(--red)';
