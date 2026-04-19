@@ -44,15 +44,21 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const today = new Date().toISOString().split('T')[0];
-    const isDirty = !initial && (
-        type !== 'expense' ||
-        category !== '' ||
-        description !== '' ||
-        amount !== '' ||
-        date !== today ||
-        notes !== '' ||
-        pendingFiles.length > 0
-    );
+    const isDirty = initial
+        ? (type !== initial.type ||
+           category !== (initial.category ?? '') ||
+           description !== initial.description ||
+           amount !== centsToDisplay(initial.amount_cents) ||
+           date !== initial.date ||
+           notes !== (initial.notes ?? '') ||
+           pendingFiles.length > 0)
+        : (type !== 'expense' ||
+           category !== '' ||
+           description !== '' ||
+           amount !== '' ||
+           date !== today ||
+           notes !== '' ||
+           pendingFiles.length > 0);
 
     const { data: allCategories = [] } = useQuery({
         queryKey: ['categories'],
