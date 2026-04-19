@@ -109,6 +109,6 @@ describe('TransactionForm', () => {
         wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
         const incomeBtn = screen.getByRole('button', { name: /income/i });
         fireEvent.click(incomeBtn);
-        expect(incomeBtn.className).toContain('bg-green-600');
+        expect((incomeBtn as HTMLButtonElement).style.background).toBe('var(--green)');
     });
 });

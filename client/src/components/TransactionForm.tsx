@@ -143,8 +143,9 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         {/* Category */}
                         <div style={{ position: 'relative' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                <label className="sid-label">Category (optional)</label>
+                                <label htmlFor="category" className="sid-label">Category (optional)</label>
                                 <input
+                                    id="category"
                                     type="text"
                                     autoComplete="off"
                                     className="sid-input"
@@ -171,8 +172,9 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
 
                         {/* Description */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <label className="sid-label">Description</label>
+                            <label htmlFor="description" className="sid-label">Description</label>
                             <input
+                                id="description"
                                 type="text"
                                 className="sid-input"
                                 value={description}
