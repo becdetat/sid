@@ -5,6 +5,6 @@ import App from './App';
 describe('App', () => {
     it('renders heading', () => {
         render(<App />);
-        expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+        expect(screen.getAllByRole('heading', { level: 1 }).length).toBeGreaterThan(0);
     });
 });

@@ -83,12 +83,12 @@ export default function Dashboard() {
                 <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--teak-dark)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                            Sid
+                            <a href="/">Sid</a>
                         </h1>
                         <WaveIcon />
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
-                            <Link to="/dashboard">Dashboard</Link>
-                        </h1>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
+                            Dashboard
+                        </h2>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>

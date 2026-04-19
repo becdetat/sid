@@ -20,6 +20,7 @@ import ExportDialog from '../components/ExportDialog';
 import { formatCents, balanceColor } from '../utils/format';
 import type { Transaction } from '../types/transaction';
 import { GearIcon } from '../components/GearIcon';
+import DashboardLink from '../components/DashboardLink';
 
 type Modal =
     | { type: 'create' }
@@ -148,18 +149,13 @@ export default function AccountDetail() {
             }}>
                 <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <Link
-                            to="/dashboard"
-                            style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--teak-dark)', letterSpacing: '-0.02em', lineHeight: 1, textDecoration: 'none' }}
-                        >
-                            Sid
-                        </Link>
-                        <WaveIcon />
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
-                            <Link to="/dashboard">Dashboard</Link>
-                            {" / "}
-                            {account.name}
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--teak-dark)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                            <a href="/">Sid</a>
                         </h1>
+                        <WaveIcon />
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
+                            {account.name}
+                        </h2>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
@@ -177,6 +173,8 @@ export default function AccountDetail() {
             </header>
 
             <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '36px 32px' }}>
+                <DashboardLink />
+
                 {/* Action bar */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '28px' }}>
                     <input

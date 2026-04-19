@@ -10,6 +10,8 @@ import dashboardRoutes from './dashboard/routes';
 import exportRoutes from './export/routes';
 import importRoutes from './import/routes';
 import categoriesRoutes from './categories/routes';
+import backupExportRoutes from './backup/exportRoutes';
+import backupImportRoutes from './backup/importRoutes';
 
 const app = express();
 const PORT = 3000;
@@ -21,6 +23,8 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
 
+app.use('/api/backup', backupExportRoutes);
+app.use('/api/backup', backupImportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/accounts/:id/export', exportRoutes);

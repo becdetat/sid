@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
+
 :root {
   --cream: #faf5e8;
   --cream-mid: #f0e8d0;
@@ -29,8 +33,6 @@
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Nunito', sans-serif;
 }
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: var(--font-body);
