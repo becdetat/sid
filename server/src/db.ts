@@ -52,4 +52,11 @@ try {
     // column already exists
 }
 
+try {
+    db.exec(`ALTER TABLE transactions ADD COLUMN created_at DATETIME`);
+    db.exec(`UPDATE transactions SET created_at = datetime('now') WHERE created_at IS NULL`);
+} catch {
+    // column already exists
+}
+
 export default db;

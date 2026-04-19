@@ -4,6 +4,7 @@ import type { Transaction } from '../types/transaction';
 import { getCategories } from '../api/categories';
 import AttachmentManager from './AttachmentManager';
 import ConfirmDialog from './ConfirmDialog';
+import { formatDateTime } from '../utils/format';
 
 interface TransactionData {
     category: string | null;
@@ -233,6 +234,12 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                             pendingFiles={pendingFiles}
                             onPendingFilesChange={setPendingFiles}
                         />
+
+                        {initial?.created_at && (
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'right' }}>
+                                Created {formatDateTime(initial.created_at)}
+                            </p>
+                        )}
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '4px' }}>
                             <button type="button" className="sid-btn sid-btn-ghost" onClick={handleCancel}>Cancel</button>
