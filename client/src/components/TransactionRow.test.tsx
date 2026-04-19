@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TransactionRow from './TransactionRow';
 import type { Transaction } from '../types/transaction';
 
@@ -26,18 +27,21 @@ const income: Transaction = {
 };
 
 function renderRow(t = expense, onEdit = vi.fn(), onDelete = vi.fn()) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
-        <table>
-            <tbody>
-                <TransactionRow 
-                    transaction={t} 
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    isLast={false}
-                    gridTemplate="100px 150px 1fr 100px 100px"
-                />
-            </tbody>
-        </table>,
+        <QueryClientProvider client={client}>
+            <table>
+                <tbody>
+                    <TransactionRow
+                        transaction={t}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        isLast={false}
+                        gridTemplate="100px 150px 1fr 100px 100px"
+                    />
+                </tbody>
+            </table>
+        </QueryClientProvider>,
     );
 }
 
