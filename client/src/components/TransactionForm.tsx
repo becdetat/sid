@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Transaction } from '../types/transaction';
 import { getCategories } from '../api/categories';
 import AttachmentManager from './AttachmentManager';
+import ConfirmDialog from './ConfirmDialog';
 
 interface TransactionData {
     category: string | null;
@@ -39,7 +40,19 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     const [notes, setNotes] = useState(initial?.notes ?? '');
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
     const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const today = new Date().toISOString().split('T')[0];
+    const isDirty = !initial && (
+        type !== 'expense' ||
+        category !== '' ||
+        description !== '' ||
+        amount !== '' ||
+        date !== today ||
+        notes !== '' ||
+        pendingFiles.length > 0
+    );
 
     const { data: allCategories = [] } = useQuery({
         queryKey: ['categories'],
@@ -50,11 +63,20 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         ? allCategories.filter((c) => c.toLowerCase().includes(category.toLowerCase()))
         : allCategories;
 
+    function handleCancel() {
+        if (isDirty) {
+            setShowDiscardConfirm(true);
+        } else {
+            onCancel();
+        }
+    }
+
     useEffect(() => {
-        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') handleCancel(); };
         window.addEventListener('keydown', h);
         return () => window.removeEventListener('keydown', h);
-    }, [onCancel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isDirty]);
 
     function handleCategoryBlur() {
         blurTimerRef.current = setTimeout(() => setShowSuggestions(false), 100);
@@ -93,7 +115,8 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     }
 
     return (
-        <div className="sid-modal-overlay anim-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+        <>
+        <div className="sid-modal-overlay anim-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) handleCancel(); }}>
             <div className="sid-modal anim-slide-up" style={{ maxWidth: '460px' }}>
                 <div className="sid-modal-trim" />
                 <div className="sid-modal-body">
@@ -204,12 +227,21 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         />
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '4px' }}>
-                            <button type="button" className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
+                            <button type="button" className="sid-btn sid-btn-ghost" onClick={handleCancel}>Cancel</button>
                             <button type="submit" className="sid-btn sid-btn-primary">Save transaction</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+        {showDiscardConfirm && (
+            <ConfirmDialog
+                message="You have unsaved changes. Discard them?"
+                confirmLabel="Discard"
+                onConfirm={onCancel}
+                onCancel={() => setShowDiscardConfirm(false)}
+            />
+        )}
+        </>
     );
 }
