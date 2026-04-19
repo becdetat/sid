@@ -1,27 +1,19 @@
 export default function SkeletonCard() {
     return (
-        <div style={{
-            background: 'var(--white)',
-            borderRadius: 'var(--radius-card)',
-            border: '1.5px solid var(--border)',
-            boxShadow: 'var(--shadow-sm)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-        }}>
-            <div className="wood-stripe" style={{ height: '24px', opacity: 0.4 }} />
-            <div style={{ padding: '18px 20px' }} className="animate-pulse">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <div style={{ height: '16px', width: '120px', background: 'var(--cream-mid)', borderRadius: '6px' }} />
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                        <div style={{ height: '24px', width: '24px', background: 'var(--cream-mid)', borderRadius: '6px' }} />
-                        <div style={{ height: '24px', width: '24px', background: 'var(--cream-mid)', borderRadius: '6px' }} />
+        <div className="bg-[var(--white)] rounded-[var(--radius-card)] [border:1.5px_solid_var(--border)] shadow-[var(--shadow-sm)] overflow-hidden flex flex-col">
+            <div className="wood-stripe h-6 opacity-40" />
+            <div className="px-5 py-[18px] animate-pulse">
+                <div className="flex justify-between mb-2.5">
+                    <div className="h-4 w-[120px] bg-[var(--cream-mid)] rounded-[6px]" />
+                    <div className="flex gap-1">
+                        <div className="h-6 w-6 bg-[var(--cream-mid)] rounded-[6px]" />
+                        <div className="h-6 w-6 bg-[var(--cream-mid)] rounded-[6px]" />
                     </div>
                 </div>
-                <div style={{ height: '32px', width: '100px', background: 'var(--cream-mid)', borderRadius: '8px', marginBottom: '14px' }} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                <div className="h-8 w-[100px] bg-[var(--cream-mid)] rounded-[8px] mb-[14px]" />
+                <div className="flex flex-col gap-1.5 mb-[14px]">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} style={{ height: '12px', width: '100%', background: 'var(--cream)', borderRadius: '4px' }} />
+                        <div key={i} className="h-3 w-full bg-[var(--cream)] rounded" />
                     ))}
                 </div>
             </div>

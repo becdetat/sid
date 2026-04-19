@@ -31,7 +31,7 @@ export default function AccountForm({ initialName = '', onSubmit, onCancel, titl
                 <div className="sid-modal-body">
                     <h2 className="sid-modal-title">{title}</h2>
                     <form onSubmit={handleSubmit}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="flex flex-col gap-[5px]">
                             <label className="sid-label">Account name</label>
                             <input
                                 type="text"
@@ -41,9 +41,9 @@ export default function AccountForm({ initialName = '', onSubmit, onCancel, titl
                                 onChange={(e) => { setName(e.target.value); setError(''); }}
                                 autoFocus
                             />
-                            {(error || serverError) && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{error || serverError}</span>}
+                            {(error || serverError) && <span className="text-xs text-[var(--red)]">{error || serverError}</span>}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                        <div className="flex justify-end gap-2.5 mt-5">
                             <button type="button" className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
                             <button type="submit" className="sid-btn sid-btn-primary">Save</button>
                         </div>

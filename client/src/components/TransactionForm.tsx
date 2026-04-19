@@ -130,15 +130,13 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                     <h2 className="sid-modal-title">
                         {initial ? 'Edit transaction' : 'New transaction'}
                     </h2>
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         {/* Type toggle */}
-                        <div style={{ display: 'flex', borderRadius: 'var(--radius-input)', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--cream)' }}>
+                        <div className="flex rounded-[var(--radius-input)] overflow-hidden [border:1.5px_solid_var(--border)] bg-[var(--cream)]">
                             {(['expense', 'income'] as const).map((t) => (
                                 <button key={t} type="button" onClick={() => setType(t)}
+                                    className="flex-1 p-[9px] border-none cursor-pointer font-body font-bold text-[13px] transition-all duration-150"
                                     style={{
-                                        flex: 1, padding: '9px', border: 'none', cursor: 'pointer',
-                                        fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '13px',
-                                        transition: 'all 0.15s',
                                         background: type === t ? (t === 'expense' ? 'var(--red)' : 'var(--green)') : 'transparent',
                                         color: type === t ? '#fff' : 'var(--text-secondary)',
                                     }}>
@@ -148,8 +146,8 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         </div>
 
                         {/* Category */}
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="relative">
+                            <div className="flex flex-col gap-[5px]">
                                 <label htmlFor="category" className="sid-label">Category (optional)</label>
                                 <input
                                     id="category"
@@ -178,7 +176,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         </div>
 
                         {/* Description */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="flex flex-col gap-[5px]">
                             <label htmlFor="description" className="sid-label">Description</label>
                             <input
                                 id="description"
@@ -187,11 +185,11 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                 value={description}
                                 onChange={(e) => { setDescription(e.target.value); setErrors((p) => ({ ...p, description: undefined })); }}
                             />
-                            {errors.description && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{errors.description}</span>}
+                            {errors.description && <span className="text-xs text-[var(--red)]">{errors.description}</span>}
                         </div>
 
                         {/* Amount */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="flex flex-col gap-[5px]">
                             <label className="sid-label">Amount</label>
                             <input
                                 type="number"
@@ -201,11 +199,11 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                 value={amount}
                                 onChange={(e) => { setAmount(e.target.value); setErrors((p) => ({ ...p, amount: undefined })); }}
                             />
-                            {errors.amount && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{errors.amount}</span>}
+                            {errors.amount && <span className="text-xs text-[var(--red)]">{errors.amount}</span>}
                         </div>
 
                         {/* Date */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="flex flex-col gap-[5px]">
                             <label className="sid-label">Date</label>
                             <input
                                 type="date"
@@ -213,16 +211,15 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                 value={date}
                                 onChange={(e) => { setDate(e.target.value); setErrors((p) => ({ ...p, date: undefined })); }}
                             />
-                            {errors.date && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{errors.date}</span>}
+                            {errors.date && <span className="text-xs text-[var(--red)]">{errors.date}</span>}
                         </div>
 
                         {/* Notes */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="flex flex-col gap-[5px]">
                             <label className="sid-label">Notes (optional)</label>
                             <textarea
                                 rows={2}
-                                className="sid-input"
-                                style={{ resize: 'vertical' }}
+                                className="sid-input resize-y"
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                             />
@@ -236,12 +233,12 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         />
 
                         {initial?.created_at && (
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'right' }}>
+                            <p className="text-xs text-[var(--text-muted)] text-right">
                                 Created {formatDateTime(initial.created_at)}
                             </p>
                         )}
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '4px' }}>
+                        <div className="flex justify-end gap-2.5 pt-1">
                             <button type="button" className="sid-btn sid-btn-ghost" onClick={handleCancel}>Cancel</button>
                             <button type="submit" className="sid-btn sid-btn-primary">Save transaction</button>
                         </div>
