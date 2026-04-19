@@ -6,6 +6,7 @@ import type { Transaction } from '../types/transaction';
 const expense: Transaction = {
     id: 1,
     account_id: 1,
+    category: 'Food & Drink',
     description: 'Coffee',
     amount_cents: -450,
     type: 'expense',
