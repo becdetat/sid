@@ -46,7 +46,8 @@ describe('AccountCard', () => {
 
     it('shows balance colour-coded red for negative', () => {
         renderCard();
-        expect(screen.getByText('-$150.00').className).toContain('text-red-600');
+        const el = screen.getByText('\u2212$150.00');
+        expect(el.style.color).toBe('var(--red)');
     });
 
     it('shows "No transactions yet" when recent_transactions is empty', () => {

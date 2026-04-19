@@ -4,9 +4,10 @@ interface Props {
     message: string;
     onConfirm: () => void;
     onCancel: () => void;
+    confirmLabel?: string;
 }
 
-export default function ConfirmDialog({ message, onConfirm, onCancel }: Props) {
+export default function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Delete' }: Props) {
     useEffect(() => {
         const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
         window.addEventListener('keydown', h);
@@ -26,7 +27,7 @@ export default function ConfirmDialog({ message, onConfirm, onCancel }: Props) {
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                         <button className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
-                        <button className="sid-btn sid-btn-danger" onClick={onConfirm}>Delete</button>
+                        <button className="sid-btn sid-btn-danger" onClick={onConfirm}>{confirmLabel}</button>
                     </div>
                 </div>
             </div>

@@ -55,13 +55,13 @@ describe('TransactionRow', () => {
     it('renders expense amount in red with minus sign', () => {
         renderRow();
         const cell = screen.getByText('−$4.50');
-        expect(cell.className).toContain('text-red-600');
+        expect(cell.style.color).toBe('var(--red)');
     });
 
     it('renders income amount in green with plus sign', () => {
         renderRow(income);
-        const cell = screen.getByText('+$1000.00');
-        expect(cell.className).toContain('text-green-600');
+        const cell = screen.getByText('+$1,000.00');
+        expect(cell.style.color).toBe('var(--green)');
     });
 
     it('calls onEdit when edit button is clicked', () => {

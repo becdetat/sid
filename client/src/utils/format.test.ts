@@ -11,7 +11,7 @@ describe('formatCents', () => {
     });
 
     it('formats zero', () => {
-        expect(formatCents(0)).toBe('+$0.00');
+        expect(formatCents(0)).toBe('$0.00');
     });
 });
 
