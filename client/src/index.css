@@ -199,3 +199,7 @@ body {
   transition: background 0.1s;
 }
 .sid-suggestion-item:hover { background: var(--cream); color: var(--teak); }
+
+/* Font utilities */
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }

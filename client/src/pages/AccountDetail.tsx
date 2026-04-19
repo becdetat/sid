@@ -31,7 +31,7 @@ type Modal =
 const TX_GRID = '130px 120px 1fr 90px 120px 72px';
 
 const WaveIcon = () => (
-    <svg width="32" height="14" viewBox="0 0 32 14" fill="none" style={{ opacity: 0.45 }}>
+    <svg width="32" height="14" viewBox="0 0 32 14" fill="none" className="opacity-[0.45]">
         <path d="M0 7 Q4 2 8 7 Q12 12 16 7 Q20 2 24 7 Q28 12 32 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
     </svg>
 );
@@ -129,39 +129,32 @@ export default function AccountDetail() {
     }
 
     if (accountLoading) {
-        return <div style={{ padding: '48px', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>Loading…</div>;
+        return <div className="p-12 text-[var(--text-muted)] font-body">Loading…</div>;
     }
 
     if (!account) {
-        return <div style={{ padding: '48px', color: 'var(--red)', fontFamily: 'var(--font-body)' }}>Account not found.</div>;
+        return <div className="p-12 text-[var(--red)] font-body">Account not found.</div>;
     }
 
     return (
-        <div style={{ minHeight: '100vh' }}>
+        <div className="min-h-screen">
             {/* Nav */}
-            <header style={{
-                background: 'var(--white)',
-                borderBottom: '1.5px solid var(--border)',
-                boxShadow: '0 1px 0 var(--cream-dark)',
-                position: 'sticky',
-                top: 0,
-                zIndex: 100,
-            }}>
-                <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--teak-dark)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+            <header className="bg-[var(--white)] [border-bottom:1.5px_solid_var(--border)] shadow-[0_1px_0_var(--cream-dark)] sticky top-0 z-[100]">
+                <div className="max-w-[1100px] mx-auto px-8 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <h1 className="font-display text-[26px] font-bold text-[var(--teak-dark)] tracking-[-0.02em] leading-none">
                             <a href="/">Sid</a>
                         </h1>
                         <WaveIcon />
-                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
+                        <h2 className="font-display text-xl font-bold text-[var(--teak-dark)] m-0">
                             {account.name}
                         </h2>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
+                    <div className="flex items-center gap-5">
+                        <span className="text-[13px] text-[var(--text-muted)] font-semibold font-body">
                             Balance
                         </span>
-                       <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: balanceColor(balance) }}>
+                        <span className="font-display text-xl font-bold" style={{ color: balanceColor(balance) }}>
                             {formatCents(balance)}
                         </span>
                         <Link to="/settings" aria-label="Settings" className="sid-icon-btn">
@@ -172,16 +165,16 @@ export default function AccountDetail() {
                 <div className="sid-header-stripe" />
             </header>
 
-            <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '36px 32px' }}>
+            <main className="max-w-[1100px] mx-auto px-8 py-[36px]">
                 <DashboardLink />
 
                 {/* Action bar */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '28px' }}>
+                <div className="flex justify-end gap-2 mb-7">
                     <input
                         ref={importInputRef}
                         type="file"
                         accept=".csv"
-                        style={{ display: 'none' }}
+                        className="hidden"
                         onChange={handleImport}
                     />
                     <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={downloadImportTemplate}>
@@ -203,12 +196,12 @@ export default function AccountDetail() {
                 </div>
 
                 {txLoading && (
-                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Loading…</p>
+                    <p className="text-sm text-[var(--text-muted)]">Loading…</p>
                 )}
 
                 {!txLoading && transactions.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>No transactions yet.</p>
+                    <div className="text-center py-[60px]">
+                        <p className="text-[var(--text-muted)] text-sm mb-4">No transactions yet.</p>
                         <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
                             Add first transaction
                         </button>
@@ -216,11 +209,14 @@ export default function AccountDetail() {
                 )}
 
                 {transactions.length > 0 && (
-                    <div style={{ background: 'var(--white)', borderRadius: '16px', border: '1.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+                    <div className="bg-[var(--white)] rounded-2xl [border:1.5px_solid_var(--border)] overflow-hidden shadow-[var(--shadow-sm)]">
                         {/* Table header */}
-                        <div style={{ display: 'grid', gridTemplateColumns: TX_GRID, padding: '10px 20px', background: 'var(--cream)', borderBottom: '1.5px solid var(--border)' }}>
+                        <div
+                            className="grid px-5 py-[10px] bg-[var(--cream)] [border-bottom:1.5px_solid_var(--border)]"
+                            style={{ gridTemplateColumns: TX_GRID }}
+                        >
                             {['Date', 'Category', 'Description', 'Type', 'Amount', ''].map((h, i) => (
-                                <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: i === 4 ? 'right' : 'left' as any }}>
+                                <div key={i} className={`text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] ${i === 4 ? 'text-right' : 'text-left'}`}>
                                     {h}
                                 </div>
                             ))}

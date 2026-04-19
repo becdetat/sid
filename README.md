@@ -47,10 +47,31 @@ npm run format    # Prettier across client and server
 
 ## Self-hosting with Docker
 
-```bash
-cd docker/
-cp .env.example .env
-# edit .env as needed
+Create `docker-compose.yml` (or copy it from `/docker/docker-compose.yml`):
+
+```yml
+services:
+  sid:
+    image: ghcr.io/becdetat/sid:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
+```
+
+Create `.env` (or copy and rename it from `/docker/.env.example`)
+
+```
+DATABASE_PATH=/data/sid.db
+CORS_ORIGIN=*
+```
+
+Now create the `./data` directory and bring the compose stack up:
+
+```sh
 mkdir data
 docker compose up -d
 ```

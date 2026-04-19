@@ -45,37 +45,16 @@ export default function ImportExportSection() {
         }
     }
 
-    const labelStyle: React.CSSProperties = {
-        fontSize: '13px',
-        fontWeight: 600,
-        color: 'var(--text-secondary)',
-        fontFamily: 'var(--font-body)',
-        marginBottom: '4px',
-        display: 'block',
-    };
-
-    const descStyle: React.CSSProperties = {
-        fontSize: '13px',
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-body)',
-        marginBottom: '16px',
-    };
-
-    const dividerStyle: React.CSSProperties = {
-        borderTop: '1px solid var(--border)',
-        margin: '32px 0',
-    };
-
     return (
         <section>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700, color: 'var(--teak-dark)', margin: '0 0 24px' }}>
+            <h2 className="font-display text-[22px] font-bold text-[var(--teak-dark)] mb-6">
                 Import / Export
             </h2>
 
             {/* Export */}
             <div>
-                <span style={labelStyle}>Export</span>
-                <p style={descStyle}>
+                <span className="text-[13px] font-semibold text-[var(--text-secondary)] font-body mb-1 block">Export</span>
+                <p className="text-[13px] text-[var(--text-muted)] font-body mb-4">
                     Download a full backup of all accounts, transactions, and attachments (including deleted records) as a ZIP file.
                 </p>
                 <button
@@ -87,68 +66,59 @@ export default function ImportExportSection() {
                 </button>
             </div>
 
-            <div style={dividerStyle} />
+            <div className="border-t border-[var(--border)] my-8" />
 
             {/* Import */}
             <div>
-                <span style={labelStyle}>Import</span>
-                <p style={descStyle}>
+                <span className="text-[13px] font-semibold text-[var(--text-secondary)] font-body mb-1 block">Import</span>
+                <p className="text-[13px] text-[var(--text-muted)] font-body mb-4">
                     Restore or merge data from a Sid backup ZIP file.
                 </p>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-[5px]">
                         <label className="sid-label">Backup file</label>
                         <input
                             ref={fileInputRef}
                             type="file"
                             accept=".zip"
-                            className="sid-input"
-                            style={{ cursor: 'pointer' }}
+                            className="sid-input cursor-pointer"
                             onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
                         />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="flex flex-col gap-2.5">
                         <label className="sid-label">Import mode</label>
-                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                        <label className="flex items-start gap-2.5 cursor-pointer">
                             <input
                                 type="radio"
                                 name="import-mode"
                                 value="merge"
                                 checked={mode === 'merge'}
                                 onChange={() => setMode('merge')}
-                                style={{ marginTop: '2px' }}
+                                className="mt-0.5"
                             />
-                            <span style={{ fontSize: '14px', fontFamily: 'var(--font-body)' }}>
+                            <span className="text-sm font-body">
                                 <strong>Merge</strong> — add imported data alongside existing data. Account names that conflict will be renamed.
                             </span>
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                        <label className="flex items-start gap-2.5 cursor-pointer">
                             <input
                                 type="radio"
                                 name="import-mode"
                                 value="wipe"
                                 checked={mode === 'wipe'}
                                 onChange={() => setMode('wipe')}
-                                style={{ marginTop: '2px' }}
+                                className="mt-0.5"
                             />
-                            <span style={{ fontSize: '14px', fontFamily: 'var(--font-body)' }}>
+                            <span className="text-sm font-body">
                                 <strong>Wipe and restore</strong> — delete all existing data and replace with the backup.
                             </span>
                         </label>
                     </div>
 
                     {mode === 'wipe' && (
-                        <div style={{
-                            background: 'var(--red-soft, #fff0f0)',
-                            border: '1px solid var(--red, #d9534f)',
-                            borderRadius: '8px',
-                            padding: '12px 16px',
-                            fontSize: '13px',
-                            color: 'var(--red, #d9534f)',
-                            fontFamily: 'var(--font-body)',
-                        }}>
+                        <div className="bg-[#fff0f0] border border-[var(--red)] rounded-[8px] px-4 py-3 text-[13px] text-[var(--red)] font-body">
                             <strong>Warning:</strong> This will permanently delete all existing accounts, transactions, and attachments before restoring from the backup. This cannot be undone.
                         </div>
                     )}

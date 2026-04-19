@@ -85,8 +85,8 @@ export default function AccountsSection() {
 
     return (
         <section>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="font-display text-[22px] font-bold text-[var(--teak-dark)] m-0">
                     Accounts
                 </h2>
                 <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
@@ -95,12 +95,12 @@ export default function AccountsSection() {
             </div>
 
             {isLoading && (
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading…</p>
+                <p className="text-[var(--text-muted)] text-sm">Loading…</p>
             )}
 
             {!isLoading && accounts.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: '20px' }}>No accounts yet.</p>
+                <div className="text-center py-[60px]">
+                    <p className="text-[var(--text-muted)] text-[15px] mb-5">No accounts yet.</p>
                     <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
                         + New account
                     </button>
@@ -108,29 +108,29 @@ export default function AccountsSection() {
             )}
 
             {!isLoading && accounts.length > 0 && (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table className="w-full border-collapse">
                     <thead>
-                        <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
-                            <th style={{ textAlign: 'left', padding: '8px 12px 10px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-muted)', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>
+                        <tr className="[border-bottom:1.5px_solid_var(--border)]">
+                            <th className="text-left px-3 pt-2 pb-[10px] text-[11px] font-bold tracking-[0.06em] text-[var(--text-muted)] uppercase font-body">
                                 Name
                             </th>
-                            <th style={{ textAlign: 'right', padding: '8px 12px 10px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-muted)', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>
+                            <th className="text-right px-3 pt-2 pb-[10px] text-[11px] font-bold tracking-[0.06em] text-[var(--text-muted)] uppercase font-body">
                                 Transactions
                             </th>
-                            <th style={{ width: '72px' }} />
+                            <th className="w-[72px]" />
                         </tr>
                     </thead>
                     <tbody>
                         {accounts.map((account) => (
-                            <tr key={account.id} style={{ borderBottom: '1px solid var(--cream-mid)' }}>
-                                <td style={{ padding: '12px', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>
+                            <tr key={account.id} className="border-b border-[var(--cream-mid)]">
+                                <td className="p-3 text-sm font-semibold text-[var(--text-primary)] font-body">
                                     {account.name}
                                 </td>
-                                <td style={{ padding: '12px', fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'right', fontFamily: 'var(--font-body)' }}>
+                                <td className="p-3 text-sm text-[var(--text-secondary)] text-right font-body">
                                     {account.transaction_count}
                                 </td>
-                                <td style={{ padding: '12px 12px 12px 0' }}>
-                                    <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
+                                <td className="p-3 pl-0">
+                                    <div className="flex gap-0.5 justify-end">
                                         <button
                                             aria-label={`Edit ${account.name}`}
                                             className="sid-icon-btn"

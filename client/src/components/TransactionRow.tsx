@@ -31,7 +31,6 @@ function formatBytes(bytes: number): string {
 }
 
 export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete }: Props) {
-    const [hov, setHov] = useState(false);
     const [expanded, setExpanded] = useState(false);
     const isIncome = transaction.type === 'income';
 
@@ -45,40 +44,22 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
         <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--cream-mid)' }}>
             {/* Main row */}
             <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: gridTemplate,
-                    padding: '13px 20px',
-                    alignItems: 'center',
-                    background: hov ? 'var(--cream)' : 'transparent',
-                    transition: 'background 0.12s',
-                    cursor: 'pointer',
-                    borderBottom: expanded ? '1px solid var(--cream-mid)' : 'none',
-                }}
+                className="group grid cursor-pointer items-center px-5 py-[13px] hover:bg-[var(--cream)] transition-colors duration-[120ms]"
+                style={{ gridTemplateColumns: gridTemplate, borderBottom: expanded ? '1px solid var(--cream-mid)' : 'none' }}
                 onClick={() => setExpanded((e) => !e)}
-                onMouseEnter={() => setHov(true)}
-                onMouseLeave={() => setHov(false)}
             >
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{formatDate(transaction.date)}</span>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{transaction.category ?? ''}</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>{transaction.description}</span>
+                <span className="text-[13px] text-[var(--text-muted)]">{formatDate(transaction.date)}</span>
+                <span className="text-xs text-[var(--text-muted)]">{transaction.category ?? ''}</span>
+                <span className="text-[13px] text-[var(--text-primary)] font-semibold">{transaction.description}</span>
                 <span>
-                    <span style={{
-                        display: 'inline-block',
-                        padding: '3px 8px',
-                        borderRadius: '99px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        background: isIncome ? 'var(--green-light)' : 'var(--red-light)',
-                        color: isIncome ? 'var(--green)' : 'var(--red)',
-                    }}>
+                    <span className={`inline-block px-2 py-[3px] rounded-full text-[11px] font-bold ${isIncome ? 'bg-[var(--green-light)] text-[var(--green)]' : 'bg-[var(--red-light)] text-[var(--red)]'}`}>
                         {transaction.type}
                     </span>
                 </span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: balanceColor(transaction.amount_cents), textAlign: 'right' }}>
+                <span className="text-[13px] font-bold text-right" style={{ color: balanceColor(transaction.amount_cents) }}>
                     {formatCents(transaction.amount_cents)}
                 </span>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '2px', opacity: hov ? 1 : 0, transition: 'opacity 0.15s' }}>
+                <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                     <button
                         aria-label={`Edit ${transaction.description}`}
                         onClick={(e) => { e.stopPropagation(); onEdit(transaction); }}
@@ -98,32 +79,32 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
 
             {/* Expanded detail panel */}
             {expanded && (
-                <div style={{ padding: '16px 20px', background: 'var(--cream)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="px-5 py-4 bg-[var(--cream)] flex flex-col gap-3">
                     {transaction.notes && (
                         <div>
-                            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Notes</div>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{transaction.notes}</p>
+                            <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] mb-1">Notes</div>
+                            <p className="text-[13px] text-[var(--text-secondary)] leading-[1.5] whitespace-pre-wrap">{transaction.notes}</p>
                         </div>
                     )}
 
                     <div>
-                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Attachments</div>
+                        <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] mb-1">Attachments</div>
                         {attachments.length === 0 ? (
-                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>None</p>
+                            <p className="text-[13px] text-[var(--text-muted)] italic">None</p>
                         ) : (
-                            <ul style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <ul className="flex flex-col gap-1">
                                 {attachments.map((a) => (
-                                    <li key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                                    <li key={a.id} className="flex items-center gap-2 text-[13px]">
                                         <a
                                             href={downloadUrl(a.id)}
                                             target="_blank"
                                             rel="noreferrer"
                                             onClick={(e) => e.stopPropagation()}
-                                            style={{ color: 'var(--teak)', fontWeight: 600, textDecoration: 'none' }}
+                                            className="text-[var(--teak)] font-semibold no-underline"
                                         >
                                             {a.filename}
                                         </a>
-                                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{formatBytes(a.size_bytes)}</span>
+                                        <span className="text-[var(--text-muted)] text-xs">{formatBytes(a.size_bytes)}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -132,8 +113,8 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
 
                     {transaction.created_at && (
                         <div>
-                            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Created</div>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{formatDateTime(transaction.created_at)}</p>
+                            <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] mb-1">Created</div>
+                            <p className="text-[13px] text-[var(--text-secondary)]">{formatDateTime(transaction.created_at)}</p>
                         </div>
                     )}
                 </div>

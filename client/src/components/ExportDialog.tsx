@@ -38,18 +38,18 @@ export default function ExportDialog({ accountId, accountName, defaultFrom = '',
                 <div className="sid-modal-trim" />
                 <div className="sid-modal-body">
                     <h2 className="sid-modal-title">Export — {accountName}</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div className="flex flex-col gap-4 mb-5">
+                        <div className="flex flex-col gap-[5px]">
                             <label className="sid-label">From</label>
                             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="sid-input" />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="flex flex-col gap-[5px]">
                             <label className="sid-label">To</label>
                             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="sid-input" />
                         </div>
                     </div>
-                    {error && <p style={{ fontSize: '12px', color: 'var(--red)', marginBottom: '12px' }}>{error}</p>}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    {error && <p className="text-xs text-[var(--red)] mb-3">{error}</p>}
+                    <div className="flex justify-end gap-2.5">
                         <button className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
                         <button className="sid-btn sid-btn-primary" onClick={handleDownload}>Download</button>
                     </div>
