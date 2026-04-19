@@ -5,16 +5,39 @@ export interface Account {
     name: string;
     created_at: string;
     deleted_at: string | null;
+    transaction_count: number;
 }
 
 export function findAll(): Account[] {
-    return db.prepare('SELECT * FROM accounts WHERE deleted_at IS NULL ORDER BY name').all() as Account[];
+    return db.prepare(`
+        SELECT a.*,
+            (SELECT COUNT(*) FROM transactions t WHERE t.account_id = a.id AND t.deleted_at IS NULL) AS transaction_count
+        FROM accounts a
+        WHERE a.deleted_at IS NULL
+        ORDER BY a.name
+    `).all() as Account[];
 }
 
 export function findById(id: number): Account | undefined {
     return db
-        .prepare('SELECT * FROM accounts WHERE id = ? AND deleted_at IS NULL')
+        .prepare(`
+            SELECT a.*,
+                (SELECT COUNT(*) FROM transactions t WHERE t.account_id = a.id AND t.deleted_at IS NULL) AS transaction_count
+            FROM accounts a
+            WHERE a.id = ? AND a.deleted_at IS NULL
+        `)
         .get(id) as Account | undefined;
+}
+
+export function findByName(name: string): Account | undefined {
+    return db
+        .prepare(`
+            SELECT a.*,
+                (SELECT COUNT(*) FROM transactions t WHERE t.account_id = a.id AND t.deleted_at IS NULL) AS transaction_count
+            FROM accounts a
+            WHERE lower(a.name) = lower(?) AND a.deleted_at IS NULL
+        `)
+        .get(name) as Account | undefined;
 }
 
 export function create(name: string): Account {

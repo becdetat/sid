@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Dashboard from './pages/Dashboard';
 import AccountDetail from './pages/AccountDetail';
+import Settings from './pages/Settings';
 
 const queryClient = new QueryClient();
 
@@ -14,6 +15,7 @@ export default function App() {
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/accounts/:id" element={<AccountDetail />} />
+                    <Route path="/settings" element={<Settings />} />
                 </Routes>
             </BrowserRouter>
             <Toaster
