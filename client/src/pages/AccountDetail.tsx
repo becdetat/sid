@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getAccount } from '../api/accounts';
@@ -17,7 +17,7 @@ import TransactionRow from '../components/TransactionRow';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ExportDialog from '../components/ExportDialog';
-import { formatCents } from '../utils/format';
+import { formatCents, balanceColor } from '../utils/format';
 import type { Transaction } from '../types/transaction';
 
 type Modal =
@@ -26,9 +26,12 @@ type Modal =
     | { type: 'delete'; transaction: Transaction }
     | null;
 
+const TX_GRID = '130px 120px 1fr 90px 120px 72px';
+
 export default function AccountDetail() {
     const { id } = useParams<{ id: string }>();
     const accountId = parseInt(id!, 10);
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [showExport, setShowExport] = useState(false);
@@ -119,100 +122,109 @@ export default function AccountDetail() {
     }
 
     if (accountLoading) {
-        return <div className="p-8 text-sm text-gray-400">Loading…</div>;
+        return <div style={{ padding: '48px', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>Loading…</div>;
     }
 
     if (!account) {
-        return <div className="p-8 text-sm text-red-500">Account not found.</div>;
+        return <div style={{ padding: '48px', color: 'var(--red)', fontFamily: 'var(--font-body)' }}>Account not found.</div>;
     }
 
     return (
-        <div className="p-8 max-w-3xl mx-auto">
-            <div className="mb-6">
-                <Link to="/dashboard" className="text-sm text-blue-600 hover:underline">
-                    ← Accounts
-                </Link>
-                <div className="flex items-center justify-between mt-2">
-                    <h1 className="text-2xl font-bold">{account.name}</h1>
-                    <span
-                        className={`text-lg font-semibold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                    >
+        <div style={{ minHeight: '100vh' }}>
+            {/* Nav */}
+            <header style={{
+                background: 'var(--white)',
+                borderBottom: '1.5px solid var(--border)',
+                boxShadow: '0 1px 0 var(--cream-dark)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 100,
+            }}>
+                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--teak)', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            ← Accounts
+                        </button>
+                        <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)' }}>
+                            {account.name}
+                        </h1>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: balanceColor(balance) }}>
                         {formatCents(balance)}
                     </span>
                 </div>
-            </div>
+                <div className="sid-header-stripe" />
+            </header>
 
-            <div className="flex justify-end gap-2 mb-4">
-                <input
-                    ref={importInputRef}
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={handleImport}
-                />
-                <button
-                    onClick={downloadImportTemplate}
-                    className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                    Download template
-                </button>
-                <button
-                    onClick={() => importInputRef.current?.click()}
-                    disabled={isImporting}
-                    className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isImporting ? 'Importing…' : 'Import CSV'}
-                </button>
-                <button
-                    onClick={() => setShowExport(true)}
-                    className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                    Export CSV
-                </button>
-                <button
-                    onClick={() => setModal({ type: 'create' })}
-                    className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                >
-                    New transaction
-                </button>
-            </div>
+            <main style={{ maxWidth: '900px', margin: '0 auto', padding: '36px 32px' }}>
+                {/* Action bar */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '28px' }}>
+                    <input
+                        ref={importInputRef}
+                        type="file"
+                        accept=".csv"
+                        style={{ display: 'none' }}
+                        onChange={handleImport}
+                    />
+                    <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={downloadImportTemplate}>
+                        Download template
+                    </button>
+                    <button
+                        className="sid-btn sid-btn-ghost sid-btn-sm"
+                        onClick={() => importInputRef.current?.click()}
+                        disabled={isImporting}
+                    >
+                        {isImporting ? 'Importing…' : 'Import CSV'}
+                    </button>
+                    <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={() => setShowExport(true)}>
+                        Export CSV
+                    </button>
+                    <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
+                        + New transaction
+                    </button>
+                </div>
 
-            {txLoading && <p className="text-sm text-gray-400">Loading…</p>}
+                {txLoading && (
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Loading…</p>
+                )}
 
-            {!txLoading && transactions.length === 0 && (
-                <p className="text-sm text-gray-400">No transactions yet.</p>
-            )}
+                {!txLoading && transactions.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>No transactions yet.</p>
+                        <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
+                            Add first transaction
+                        </button>
+                    </div>
+                )}
 
-            {transactions.length > 0 && (
-                <table className="w-full">
-                    <thead>
-                        <tr className="border-b border-gray-200 text-left">
-                            <th className="pb-2 pr-4 text-xs font-medium text-gray-500">Date</th>
-                            <th className="pb-2 pr-4 text-xs font-medium text-gray-500">
-                                Category
-                            </th>
-                            <th className="pb-2 pr-4 text-xs font-medium text-gray-500">
-                                Description
-                            </th>
-                            <th className="pb-2 pr-4 text-xs font-medium text-gray-500">Type</th>
-                            <th className="pb-2 pr-4 text-xs font-medium text-gray-500 text-right">
-                                Amount
-                            </th>
-                            <th className="pb-2" />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {transactions.map((t) => (
+                {transactions.length > 0 && (
+                    <div style={{ background: 'var(--white)', borderRadius: '16px', border: '1.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+                        {/* Table header */}
+                        <div style={{ display: 'grid', gridTemplateColumns: TX_GRID, padding: '10px 20px', background: 'var(--cream)', borderBottom: '1.5px solid var(--border)' }}>
+                            {['Date', 'Category', 'Description', 'Type', 'Amount', ''].map((h, i) => (
+                                <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: i === 4 ? 'right' : 'left' as any }}>
+                                    {h}
+                                </div>
+                            ))}
+                        </div>
+                        {/* Rows */}
+                        {transactions.map((t, idx) => (
                             <TransactionRow
                                 key={t.id}
                                 transaction={t}
+                                isLast={idx === transactions.length - 1}
+                                gridTemplate={TX_GRID}
                                 onEdit={(tx) => setModal({ type: 'edit', transaction: tx })}
                                 onDelete={(tx) => setModal({ type: 'delete', transaction: tx })}
                             />
                         ))}
-                    </tbody>
-                </table>
-            )}
+                    </div>
+                )}
+            </main>
 
             {modal?.type === 'create' && (
                 <TransactionForm
@@ -220,17 +232,13 @@ export default function AccountDetail() {
                     onCancel={() => setModal(null)}
                 />
             )}
-
             {modal?.type === 'edit' && (
                 <TransactionForm
                     initial={modal.transaction}
-                    onSubmit={(data, files) =>
-                        handleUpdate(modal.transaction.id, data, files)
-                    }
+                    onSubmit={(data, files) => handleUpdate(modal.transaction.id, data, files)}
                     onCancel={() => setModal(null)}
                 />
             )}
-
             {showExport && (
                 <ExportDialog
                     accountId={accountId}
@@ -240,7 +248,6 @@ export default function AccountDetail() {
                     onCancel={() => setShowExport(false)}
                 />
             )}
-
             {modal?.type === 'delete' && (
                 <ConfirmDialog
                     message={`Delete "${modal.transaction.description}"? This will also delete any attachments.`}

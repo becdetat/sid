@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Transaction } from '../types/transaction';
 import { getCategories } from '../api/categories';
@@ -50,6 +50,12 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         ? allCategories.filter((c) => c.toLowerCase().includes(category.toLowerCase()))
         : allCategories;
 
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, [onCancel]);
+
     function handleCategoryBlur() {
         blurTimerRef.current = setTimeout(() => setShowSuggestions(false), 100);
     }
@@ -87,174 +93,122 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-                <h2 className="text-lg font-semibold mb-4">
-                    {initial ? 'Edit transaction' : 'New transaction'}
-                </h2>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    {/* Type toggle */}
-                    <div className="flex rounded overflow-hidden border border-gray-300">
-                        <button
-                            type="button"
-                            onClick={() => setType('expense')}
-                            className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                                type === 'expense'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                            Expense
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setType('income')}
-                            className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                                type === 'income'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                            Income
-                        </button>
-                    </div>
+        <div className="sid-modal-overlay anim-fade" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+            <div className="sid-modal anim-slide-up" style={{ maxWidth: '460px' }}>
+                <div className="sid-modal-trim" />
+                <div className="sid-modal-body">
+                    <h2 className="sid-modal-title">
+                        {initial ? 'Edit transaction' : 'New transaction'}
+                    </h2>
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Type toggle */}
+                        <div style={{ display: 'flex', borderRadius: 'var(--radius-input)', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--cream)' }}>
+                            {(['expense', 'income'] as const).map((t) => (
+                                <button key={t} type="button" onClick={() => setType(t)}
+                                    style={{
+                                        flex: 1, padding: '9px', border: 'none', cursor: 'pointer',
+                                        fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '13px',
+                                        transition: 'all 0.15s',
+                                        background: type === t ? (t === 'expense' ? 'var(--red)' : 'var(--green)') : 'transparent',
+                                        color: type === t ? '#fff' : 'var(--text-secondary)',
+                                    }}>
+                                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                                </button>
+                            ))}
+                        </div>
 
-                    {/* Category */}
-                    <div className="relative">
-                        <label htmlFor="tf-category" className="block text-xs font-medium text-gray-700 mb-1">
-                            Category (optional)
-                        </label>
-                        <input
-                            id="tf-category"
-                            type="text"
-                            autoComplete="off"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={category}
-                            onChange={(e) => {
-                                setCategory(e.target.value);
-                                setShowSuggestions(true);
-                            }}
-                            onFocus={() => setShowSuggestions(true)}
-                            onBlur={handleCategoryBlur}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') setShowSuggestions(false);
-                            }}
+                        {/* Category */}
+                        <div style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <label className="sid-label">Category (optional)</label>
+                                <input
+                                    type="text"
+                                    autoComplete="off"
+                                    className="sid-input"
+                                    placeholder="e.g. Shopping"
+                                    value={category}
+                                    onChange={(e) => { setCategory(e.target.value); setShowSuggestions(true); }}
+                                    onFocus={() => setShowSuggestions(true)}
+                                    onBlur={handleCategoryBlur}
+                                    onKeyDown={(e) => { if (e.key === 'Escape') setShowSuggestions(false); }}
+                                />
+                            </div>
+                            {showSuggestions && suggestions.length > 0 && (
+                                <ul className="sid-suggestions">
+                                    {suggestions.map((c) => (
+                                        <li key={c}>
+                                            <button type="button" onMouseDown={() => handleSuggestionClick(c)} className="sid-suggestion-item">
+                                                {c}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+
+                        {/* Description */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">Description</label>
+                            <input
+                                type="text"
+                                className="sid-input"
+                                value={description}
+                                onChange={(e) => { setDescription(e.target.value); setErrors((p) => ({ ...p, description: undefined })); }}
+                            />
+                            {errors.description && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{errors.description}</span>}
+                        </div>
+
+                        {/* Amount */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">Amount</label>
+                            <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                className="sid-input"
+                                value={amount}
+                                onChange={(e) => { setAmount(e.target.value); setErrors((p) => ({ ...p, amount: undefined })); }}
+                            />
+                            {errors.amount && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{errors.amount}</span>}
+                        </div>
+
+                        {/* Date */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">Date</label>
+                            <input
+                                type="date"
+                                className="sid-input"
+                                value={date}
+                                onChange={(e) => { setDate(e.target.value); setErrors((p) => ({ ...p, date: undefined })); }}
+                            />
+                            {errors.date && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{errors.date}</span>}
+                        </div>
+
+                        {/* Notes */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label className="sid-label">Notes (optional)</label>
+                            <textarea
+                                rows={2}
+                                className="sid-input"
+                                style={{ resize: 'vertical' }}
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Attachments */}
+                        <AttachmentManager
+                            transactionId={initial?.id}
+                            pendingFiles={pendingFiles}
+                            onPendingFilesChange={setPendingFiles}
                         />
-                        {showSuggestions && suggestions.length > 0 && (
-                            <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto">
-                                {suggestions.map((c) => (
-                                    <li key={c}>
-                                        <button
-                                            type="button"
-                                            onMouseDown={() => handleSuggestionClick(c)}
-                                            className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700"
-                                        >
-                                            {c}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
 
-                    {/* Description */}
-                    <div>
-                        <label htmlFor="tf-description" className="block text-xs font-medium text-gray-700 mb-1">
-                            Description
-                        </label>
-                        <input
-                            id="tf-description"
-                            type="text"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={description}
-                            onChange={(e) => {
-                                setDescription(e.target.value);
-                                setErrors((p) => ({ ...p, description: undefined }));
-                            }}
-                        />
-                        {errors.description && (
-                            <p className="mt-1 text-xs text-red-600">{errors.description}</p>
-                        )}
-                    </div>
-
-                    {/* Amount */}
-                    <div>
-                        <label htmlFor="tf-amount" className="block text-xs font-medium text-gray-700 mb-1">
-                            Amount
-                        </label>
-                        <input
-                            id="tf-amount"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={amount}
-                            onChange={(e) => {
-                                setAmount(e.target.value);
-                                setErrors((p) => ({ ...p, amount: undefined }));
-                            }}
-                        />
-                        {errors.amount && (
-                            <p className="mt-1 text-xs text-red-600">{errors.amount}</p>
-                        )}
-                    </div>
-
-                    {/* Date */}
-                    <div>
-                        <label htmlFor="tf-date" className="block text-xs font-medium text-gray-700 mb-1">
-                            Date
-                        </label>
-                        <input
-                            id="tf-date"
-                            type="date"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={date}
-                            onChange={(e) => {
-                                setDate(e.target.value);
-                                setErrors((p) => ({ ...p, date: undefined }));
-                            }}
-                        />
-                        {errors.date && (
-                            <p className="mt-1 text-xs text-red-600">{errors.date}</p>
-                        )}
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Notes (optional)
-                        </label>
-                        <textarea
-                            rows={2}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Attachments */}
-                    <AttachmentManager
-                        transactionId={initial?.id}
-                        pendingFiles={pendingFiles}
-                        onPendingFilesChange={setPendingFiles}
-                    />
-
-                    <div className="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                            Save
-                        </button>
-                    </div>
-                </form>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '4px' }}>
+                            <button type="button" className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
+                            <button type="submit" className="sid-btn sid-btn-primary">Save transaction</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

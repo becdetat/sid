@@ -10,6 +10,7 @@ import { getDashboard } from '../api/dashboard';
 import { createAccount, updateAccount, deleteAccount } from '../api/accounts';
 import { createTransaction, type TransactionPayload } from '../api/transactions';
 import { uploadAttachments } from '../api/attachments';
+import { formatCents, balanceColor } from '../utils/format';
 import type { DashboardAccount } from '../types/dashboard';
 
 type Modal =
@@ -18,6 +19,12 @@ type Modal =
     | { type: 'delete'; account: DashboardAccount }
     | { type: 'add-transaction'; account: DashboardAccount }
     | null;
+
+const WaveIcon = () => (
+    <svg width="32" height="14" viewBox="0 0 32 14" fill="none" style={{ opacity: 0.45 }}>
+        <path d="M0 7 Q4 2 8 7 Q12 12 16 7 Q20 2 24 7 Q28 12 32 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+);
 
 export default function Dashboard() {
     const queryClient = useQueryClient();
@@ -81,51 +88,74 @@ export default function Dashboard() {
         toast.success('Transaction added.');
     }
 
+    const totalBalance = accounts.reduce((s, a) => s + a.balance_cents, 0);
+
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold">Sid</h1>
-                <button
-                    onClick={() => setModal({ type: 'create' })}
-                    className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                >
-                    New account
-                </button>
-            </div>
-
-            {isLoading && (
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {[1, 2, 3].map((i) => (
-                        <SkeletonCard key={i} />
-                    ))}
+        <div style={{ minHeight: '100vh' }}>
+            {/* Nav */}
+            <header style={{
+                background: 'var(--white)',
+                borderBottom: '1.5px solid var(--border)',
+                boxShadow: '0 1px 0 var(--cream-dark)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 100,
+            }}>
+                <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--teak-dark)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                            Sid
+                        </h1>
+                        <WaveIcon />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            Net:{' '}
+                            <span style={{ color: balanceColor(totalBalance), fontFamily: 'var(--font-display)' }}>
+                                {formatCents(totalBalance)}
+                            </span>
+                        </span>
+                        <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
+                            + New account
+                        </button>
+                    </div>
                 </div>
-            )}
+                <div className="sid-header-stripe" />
+            </header>
 
-            {!isLoading && accounts.length === 0 && (
-                <div className="flex flex-col items-center gap-4 py-16 text-center">
-                    <p className="text-gray-500">No accounts yet.</p>
-                    <button
-                        onClick={() => setModal({ type: 'create' })}
-                        className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                        Create your first account
-                    </button>
-                </div>
-            )}
+            <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '36px 32px' }}>
+                {isLoading && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '20px' }}>
+                        {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+                    </div>
+                )}
 
-            {!isLoading && accounts.length > 0 && (
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {accounts.map((account) => (
-                        <AccountCard
-                            key={account.id}
-                            account={account}
-                            onEdit={(a) => setModal({ type: 'edit', account: a })}
-                            onDelete={(a) => setModal({ type: 'delete', account: a })}
-                            onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
-                        />
-                    ))}
-                </div>
-            )}
+                {!isLoading && accounts.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>⚓</div>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: '20px' }}>
+                            No accounts yet. Cast your first line.
+                        </p>
+                        <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
+                            Create your first account
+                        </button>
+                    </div>
+                )}
+
+                {!isLoading && accounts.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '20px' }}>
+                        {accounts.map((account) => (
+                            <AccountCard
+                                key={account.id}
+                                account={account}
+                                onEdit={(a) => setModal({ type: 'edit', account: a })}
+                                onDelete={(a) => setModal({ type: 'delete', account: a })}
+                                onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
+                            />
+                        ))}
+                    </div>
+                )}
+            </main>
 
             {modal?.type === 'create' && (
                 <AccountForm
@@ -134,7 +164,6 @@ export default function Dashboard() {
                     onCancel={() => setModal(null)}
                 />
             )}
-
             {modal?.type === 'edit' && (
                 <AccountForm
                     title="Rename account"
@@ -143,7 +172,6 @@ export default function Dashboard() {
                     onCancel={() => setModal(null)}
                 />
             )}
-
             {modal?.type === 'delete' && (
                 <ConfirmDialog
                     message={`Delete "${modal.account.name}"? This will also delete all transactions and attachments.`}
@@ -151,7 +179,6 @@ export default function Dashboard() {
                     onCancel={() => setModal(null)}
                 />
             )}
-
             {modal?.type === 'add-transaction' && (
                 <TransactionForm
                     onSubmit={handleAddTransaction}

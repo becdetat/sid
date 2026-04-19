@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 interface Props {
     message: string;
     onConfirm: () => void;
@@ -5,23 +7,27 @@ interface Props {
 }
 
 export default function ConfirmDialog({ message, onConfirm, onCancel }: Props) {
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, [onCancel]);
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                <p className="text-sm text-gray-800">{message}</p>
-                <div className="mt-4 flex justify-end gap-2">
-                    <button
-                        onClick={onCancel}
-                        className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        className="px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700"
-                    >
-                        Delete
-                    </button>
+        <div className="sid-modal-overlay anim-fade" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+            <div className="sid-modal anim-slide-up">
+                <div className="sid-modal-trim" />
+                <div className="sid-modal-body">
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700, color: 'var(--teak-dark)', marginBottom: '12px' }}>
+                        Are you sure?
+                    </h2>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
+                        {message}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>
+                        <button className="sid-btn sid-btn-danger" onClick={onConfirm}>Delete</button>
+                    </div>
                 </div>
             </div>
         </div>
