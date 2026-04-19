@@ -5,9 +5,10 @@ interface Props {
     onSubmit: (name: string) => void;
     onCancel: () => void;
     title: string;
+    serverError?: string;
 }
 
-export default function AccountForm({ initialName = '', onSubmit, onCancel, title }: Props) {
+export default function AccountForm({ initialName = '', onSubmit, onCancel, title, serverError }: Props) {
     const [name, setName] = useState(initialName);
     const [error, setError] = useState('');
 
@@ -40,7 +41,7 @@ export default function AccountForm({ initialName = '', onSubmit, onCancel, titl
                                 onChange={(e) => { setName(e.target.value); setError(''); }}
                                 autoFocus
                             />
-                            {error && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{error}</span>}
+                            {(error || serverError) && <span style={{ fontSize: '12px', color: 'var(--red)' }}>{error || serverError}</span>}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                             <button type="button" className="sid-btn sid-btn-ghost" onClick={onCancel}>Cancel</button>

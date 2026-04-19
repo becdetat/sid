@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getAccount } from '../api/accounts';
@@ -19,6 +19,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import ExportDialog from '../components/ExportDialog';
 import { formatCents, balanceColor } from '../utils/format';
 import type { Transaction } from '../types/transaction';
+import { GearIcon } from '../components/GearIcon';
 
 type Modal =
     | { type: 'create' }
@@ -28,10 +29,15 @@ type Modal =
 
 const TX_GRID = '130px 120px 1fr 90px 120px 72px';
 
+const WaveIcon = () => (
+    <svg width="32" height="14" viewBox="0 0 32 14" fill="none" style={{ opacity: 0.45 }}>
+        <path d="M0 7 Q4 2 8 7 Q12 12 16 7 Q20 2 24 7 Q28 12 32 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+);
+
 export default function AccountDetail() {
     const { id } = useParams<{ id: string }>();
     const accountId = parseInt(id!, 10);
-    const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [showExport, setShowExport] = useState(false);
@@ -140,27 +146,37 @@ export default function AccountDetail() {
                 top: 0,
                 zIndex: 100,
             }}>
-                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                        <button
-                            onClick={() => navigate('/dashboard')}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--teak)', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <Link
+                            to="/dashboard"
+                            style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--teak-dark)', letterSpacing: '-0.02em', lineHeight: 1, textDecoration: 'none' }}
                         >
-                            ← Accounts
-                        </button>
-                        <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)' }}>
+                            Sid
+                        </Link>
+                        <WaveIcon />
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
+                            <Link to="/dashboard">Dashboard</Link>
+                            {" / "}
                             {account.name}
                         </h1>
                     </div>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: balanceColor(balance) }}>
-                        {formatCents(balance)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
+                            Balance
+                        </span>
+                       <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: balanceColor(balance) }}>
+                            {formatCents(balance)}
+                        </span>
+                        <Link to="/settings" aria-label="Settings" className="sid-icon-btn">
+                            <GearIcon />
+                        </Link>
+                    </div>
                 </div>
                 <div className="sid-header-stripe" />
             </header>
 
-            <main style={{ maxWidth: '900px', margin: '0 auto', padding: '36px 32px' }}>
+            <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '36px 32px' }}>
                 {/* Action bar */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '28px' }}>
                     <input

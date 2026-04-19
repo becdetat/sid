@@ -1,22 +1,21 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import AccountCard from '../components/AccountCard';
 import AccountForm from '../components/AccountForm';
-import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
 import TransactionForm from '../components/TransactionForm';
 import { getDashboard } from '../api/dashboard';
-import { createAccount, updateAccount, deleteAccount } from '../api/accounts';
+import { createAccount } from '../api/accounts';
 import { createTransaction, type TransactionPayload } from '../api/transactions';
 import { uploadAttachments } from '../api/attachments';
 import { formatCents, balanceColor } from '../utils/format';
 import type { DashboardAccount } from '../types/dashboard';
+import { GearIcon } from '../components/GearIcon';
 
 type Modal =
     | { type: 'create' }
-    | { type: 'edit'; account: DashboardAccount }
-    | { type: 'delete'; account: DashboardAccount }
     | { type: 'add-transaction'; account: DashboardAccount }
     | null;
 
@@ -43,26 +42,6 @@ export default function Dashboard() {
             toast.success('Account created.');
         },
         onError: () => toast.error('Failed to create account.'),
-    });
-
-    const updateMutation = useMutation({
-        mutationFn: ({ id, name }: { id: number; name: string }) => updateAccount(id, name),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-            setModal(null);
-            toast.success('Account renamed.');
-        },
-        onError: () => toast.error('Failed to rename account.'),
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => deleteAccount(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-            setModal(null);
-            toast.success('Account deleted.');
-        },
-        onError: () => toast.error('Failed to delete account.'),
     });
 
     const addTransactionMutation = useMutation({
@@ -107,17 +86,20 @@ export default function Dashboard() {
                             Sid
                         </h1>
                         <WaveIcon />
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: 'var(--teak-dark)', margin: 0 }}>
+                            <Link to="/dashboard">Dashboard</Link>
+                        </h1>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                            Net:{' '}
-                            <span style={{ color: balanceColor(totalBalance), fontFamily: 'var(--font-display)' }}>
-                                {formatCents(totalBalance)}
-                            </span>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
+                            Net
                         </span>
-                        <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
-                            + New account
-                        </button>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, color: balanceColor(totalBalance) }}>
+                            {formatCents(totalBalance)}
+                        </span>
+                        <Link to="/settings" aria-label="Settings" className="sid-icon-btn">
+                            <GearIcon />
+                        </Link>
                     </div>
                 </div>
                 <div className="sid-header-stripe" />
@@ -148,8 +130,6 @@ export default function Dashboard() {
                             <AccountCard
                                 key={account.id}
                                 account={account}
-                                onEdit={(a) => setModal({ type: 'edit', account: a })}
-                                onDelete={(a) => setModal({ type: 'delete', account: a })}
                                 onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
                             />
                         ))}
@@ -161,21 +141,6 @@ export default function Dashboard() {
                 <AccountForm
                     title="New account"
                     onSubmit={(name) => createMutation.mutate(name)}
-                    onCancel={() => setModal(null)}
-                />
-            )}
-            {modal?.type === 'edit' && (
-                <AccountForm
-                    title="Rename account"
-                    initialName={modal.account.name}
-                    onSubmit={(name) => updateMutation.mutate({ id: modal.account.id, name })}
-                    onCancel={() => setModal(null)}
-                />
-            )}
-            {modal?.type === 'delete' && (
-                <ConfirmDialog
-                    message={`Delete "${modal.account.name}"? This will also delete all transactions and attachments.`}
-                    onConfirm={() => deleteMutation.mutate(modal.account.id)}
                     onCancel={() => setModal(null)}
                 />
             )}

@@ -3,4 +3,5 @@ export interface Account {
     name: string;
     created_at: string;
     deleted_at: string | null;
+    transaction_count: number;
 }

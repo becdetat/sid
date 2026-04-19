@@ -6,7 +6,8 @@
       "Bash(npx tsc *)",
       "Bash(npm ls *)",
       "Bash(npm test *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(npx vitest *)"
     ]
   }
 }

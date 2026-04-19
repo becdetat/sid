@@ -42,4 +42,16 @@ describe('AccountForm', () => {
         fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
         expect(onCancel).toHaveBeenCalled();
     });
+
+    it('displays serverError when provided', () => {
+        render(
+            <AccountForm
+                title="New account"
+                onSubmit={vi.fn()}
+                onCancel={vi.fn()}
+                serverError="An account with this name already exists."
+            />,
+        );
+        expect(screen.getByText('An account with this name already exists.')).toBeTruthy();
+    });
 });

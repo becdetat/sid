@@ -13,6 +13,10 @@ router.post('/', (req, res) => {
         res.status(400).json({ error: 'name is required' });
         return;
     }
+    if (repo.findByName(name.trim())) {
+        res.status(409).json({ error: 'name already exists' });
+        return;
+    }
     const account = repo.create(name.trim());
     res.status(201).json(account);
 });
@@ -32,6 +36,11 @@ router.put('/:id', (req, res) => {
     const { name } = req.body as { name?: string };
     if (!name || name.trim() === '') {
         res.status(400).json({ error: 'name is required' });
+        return;
+    }
+    const existing = repo.findByName(name.trim());
+    if (existing && existing.id !== id) {
+        res.status(409).json({ error: 'name already exists' });
         return;
     }
     const account = repo.update(id, name.trim());

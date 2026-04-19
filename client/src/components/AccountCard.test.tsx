@@ -11,14 +11,12 @@ const account: DashboardAccount = {
     recent_transactions: [],
 };
 
-function renderCard(onEdit = vi.fn(), onDelete = vi.fn(), onAddTransaction = vi.fn()) {
+function renderCard(onAddTransaction = vi.fn()) {
     return render(
         <MemoryRouter>
-            <AccountCard 
-                account={account} 
-                onEdit={onEdit} 
-                onDelete={onDelete}
-                 onAddTransaction={onAddTransaction}
+            <AccountCard
+                account={account}
+                onAddTransaction={onAddTransaction}
             />
         </MemoryRouter>,
     );
@@ -30,18 +28,10 @@ describe('AccountCard', () => {
         expect(screen.getByRole('link', { name: 'Office' })).toBeTruthy();
     });
 
-    it('calls onEdit when edit button is clicked', () => {
-        const onEdit = vi.fn();
-        renderCard(onEdit);
-        fireEvent.click(screen.getByRole('button', { name: /edit office/i }));
-        expect(onEdit).toHaveBeenCalledWith(account);
-    });
-
-    it('calls onDelete when delete button is clicked', () => {
-        const onDelete = vi.fn();
-        renderCard(vi.fn(), onDelete);
-        fireEvent.click(screen.getByRole('button', { name: /delete office/i }));
-        expect(onDelete).toHaveBeenCalledWith(account);
+    it('does not show edit or delete buttons', () => {
+        renderCard();
+        expect(screen.queryByRole('button', { name: /edit office/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /delete office/i })).toBeNull();
     });
 
     it('shows balance colour-coded red for negative', () => {
@@ -53,5 +43,12 @@ describe('AccountCard', () => {
     it('shows "No transactions yet" when recent_transactions is empty', () => {
         renderCard();
         expect(screen.getByText('No transactions yet')).toBeTruthy();
+    });
+
+    it('calls onAddTransaction when add transaction button is clicked', () => {
+        const onAddTransaction = vi.fn();
+        renderCard(onAddTransaction);
+        fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
+        expect(onAddTransaction).toHaveBeenCalledWith(account);
     });
 });
