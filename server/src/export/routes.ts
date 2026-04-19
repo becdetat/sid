@@ -24,13 +24,14 @@ router.get('/', (req, res) => {
 
     const rows = db
         .prepare(
-            `SELECT date, description, type, amount_cents, notes
+            `SELECT date, category, description, type, amount_cents, notes
              FROM transactions
              WHERE account_id = ? AND deleted_at IS NULL AND date >= ? AND date <= ?
              ORDER BY date ASC, id ASC`,
         )
         .all(accountId, from, to) as {
         date: string;
+        category: string | null;
         description: string;
         type: string;
         amount_cents: number;

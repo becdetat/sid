@@ -1,5 +1,6 @@
 interface ExportRow {
     date: string;
+    category: string | null;
     description: string;
     type: string;
     amount_cents: number;
@@ -14,12 +15,17 @@ function escapeField(value: string): string {
 }
 
 export function toCSV(rows: ExportRow[]): string {
-    const header = 'Date,Description,Type,Amount,Notes';
+    const header = 'Date,Category,Description,Type,Amount,Notes';
     const lines = rows.map((r) => {
         const amount = (Math.abs(r.amount_cents) / 100).toFixed(2);
-        return [r.date, escapeField(r.description), r.type, amount, escapeField(r.notes ?? '')].join(
-            ',',
-        );
+        return [
+            r.date,
+            escapeField(r.category ?? ''),
+            escapeField(r.description),
+            r.type,
+            amount,
+            escapeField(r.notes ?? ''),
+        ].join(',');
     });
     return [header, ...lines].join('\n');
 }

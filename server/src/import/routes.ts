@@ -44,6 +44,7 @@ router.post('/', upload.single('file'), (req, res) => {
         for (const row of rows) {
             create({
                 account_id: accountId,
+                category: row.category ?? undefined,
                 description: row.description,
                 amount: row.amount,
                 type: row.type,

@@ -16,6 +16,7 @@ export async function getTransaction(accountId: number, id: number): Promise<Tra
 }
 
 export interface TransactionPayload {
+    category?: string | null;
     description: string;
     amount: number;
     type: 'income' | 'expense';

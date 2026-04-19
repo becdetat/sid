@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Transaction } from '../types/transaction';
+import { getCategories } from '../api/categories';
 import AttachmentManager from './AttachmentManager';
 
 interface TransactionData {
+    category: string | null;
     description: string;
     amount: number;
     type: 'income' | 'expense';
@@ -28,12 +31,34 @@ function centsToDisplay(cents: number): string {
 
 export default function TransactionForm({ initial, onSubmit, onCancel }: Props) {
     const [type, setType] = useState<'income' | 'expense'>(initial?.type ?? 'expense');
+    const [category, setCategory] = useState(initial?.category ?? '');
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const [description, setDescription] = useState(initial?.description ?? '');
     const [amount, setAmount] = useState(initial ? centsToDisplay(initial.amount_cents) : '');
     const [date, setDate] = useState(initial?.date ?? new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState(initial?.notes ?? '');
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const { data: allCategories = [] } = useQuery({
+        queryKey: ['categories'],
+        queryFn: getCategories,
+    });
+
+    const suggestions = category.trim()
+        ? allCategories.filter((c) => c.toLowerCase().includes(category.toLowerCase()))
+        : allCategories;
+
+    function handleCategoryBlur() {
+        blurTimerRef.current = setTimeout(() => setShowSuggestions(false), 100);
+    }
+
+    function handleSuggestionClick(value: string) {
+        if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+        setCategory(value);
+        setShowSuggestions(false);
+    }
 
     function validate(): boolean {
         const next: FormErrors = {};
@@ -50,6 +75,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         if (!validate()) return;
         onSubmit(
             {
+                category: category.trim() || null,
                 description: description.trim(),
                 amount: parseFloat(amount),
                 type,
@@ -91,6 +117,44 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         >
                             Income
                         </button>
+                    </div>
+
+                    {/* Category */}
+                    <div className="relative">
+                        <label htmlFor="tf-category" className="block text-xs font-medium text-gray-700 mb-1">
+                            Category (optional)
+                        </label>
+                        <input
+                            id="tf-category"
+                            type="text"
+                            autoComplete="off"
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={category}
+                            onChange={(e) => {
+                                setCategory(e.target.value);
+                                setShowSuggestions(true);
+                            }}
+                            onFocus={() => setShowSuggestions(true)}
+                            onBlur={handleCategoryBlur}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') setShowSuggestions(false);
+                            }}
+                        />
+                        {showSuggestions && suggestions.length > 0 && (
+                            <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto">
+                                {suggestions.map((c) => (
+                                    <li key={c}>
+                                        <button
+                                            type="button"
+                                            onMouseDown={() => handleSuggestionClick(c)}
+                                            className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700"
+                                        >
+                                            {c}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
 
                     {/* Description */}

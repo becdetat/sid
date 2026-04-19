@@ -1,5 +1,6 @@
 export interface ImportRow {
     date: string;
+    category: string | null;
     description: string;
     type: 'income' | 'expense';
     amount: number;
@@ -8,7 +9,7 @@ export interface ImportRow {
 
 export type ParseResult = { rows: ImportRow[] } | { error: string };
 
-const REQUIRED_HEADERS = ['date', 'description', 'type', 'amount', 'notes'];
+const REQUIRED_HEADERS = ['date', 'category', 'description', 'type', 'amount', 'notes'];
 
 function isValidDate(s: string): boolean {
     return /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
@@ -94,6 +95,7 @@ export function parseImportCSV(buffer: Buffer): ParseResult {
 
         const rowNum = i;
         const date = (rec[col['date']] ?? '').trim();
+        const category = (rec[col['category']] ?? '').trim();
         const description = (rec[col['description']] ?? '').trim();
         const typeRaw = (rec[col['type']] ?? '').trim().toLowerCase();
         const amountRaw = (rec[col['amount']] ?? '').trim();
@@ -111,6 +113,7 @@ export function parseImportCSV(buffer: Buffer): ParseResult {
 
         rows.push({
             date,
+            category: category || null,
             description,
             type: typeRaw as 'income' | 'expense',
             amount,

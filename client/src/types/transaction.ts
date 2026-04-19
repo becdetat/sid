@@ -1,6 +1,7 @@
 export interface Transaction {
     id: number;
     account_id: number;
+    category: string | null;
     description: string;
     amount_cents: number;
     type: 'income' | 'expense';

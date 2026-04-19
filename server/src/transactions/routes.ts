@@ -20,7 +20,8 @@ router.post<{ accountId: string }>('/', (req, res) => {
         return;
     }
 
-    const { description, amount, type, date, notes } = req.body as {
+    const { category, description, amount, type, date, notes } = req.body as {
+        category?: string;
         description?: string;
         amount?: number;
         type?: string;
@@ -47,6 +48,7 @@ router.post<{ accountId: string }>('/', (req, res) => {
 
     const transaction = repo.create({
         account_id: accountId,
+        category: category?.trim() || undefined,
         description: description.trim(),
         amount: Number(amount),
         type,
@@ -76,7 +78,8 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
-    const { description, amount, type, date, notes, account_id } = req.body as {
+    const { category, description, amount, type, date, notes, account_id } = req.body as {
+        category?: string | null;
         description?: string;
         amount?: number;
         type?: string;
@@ -104,6 +107,7 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
 
     const updated = repo.update(id, {
         account_id: account_id !== undefined ? Number(account_id) : undefined,
+        category: category !== undefined ? (typeof category === 'string' ? category.trim() || null : null) : undefined,
         description: description?.trim(),
         amount: amount !== undefined ? Number(amount) : undefined,
         type: type as 'income' | 'expense' | undefined,

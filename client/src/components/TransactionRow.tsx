@@ -16,6 +16,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete }: Props)
             <td className="py-2 pr-4 text-sm text-gray-500 whitespace-nowrap">
                 {formatDate(transaction.date)}
             </td>
+            <td className="py-2 pr-4 text-xs text-gray-500">{transaction.category ?? ''}</td>
             <td className="py-2 pr-4 text-sm text-gray-900">{transaction.description}</td>
             <td className="py-2 pr-4">
                 <span

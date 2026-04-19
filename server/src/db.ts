@@ -46,4 +46,10 @@ try {
     // column already exists
 }
 
+try {
+    db.exec(`ALTER TABLE transactions ADD COLUMN category TEXT`);
+} catch {
+    // column already exists
+}
+
 export default db;

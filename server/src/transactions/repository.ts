@@ -3,6 +3,7 @@ import db from '../db';
 export interface Transaction {
     id: number;
     account_id: number;
+    category: string | null;
     description: string;
     amount_cents: number;
     type: 'income' | 'expense';
@@ -15,6 +16,7 @@ export interface Transaction {
 
 export interface CreateTransactionInput {
     account_id: number;
+    category?: string;
     description: string;
     amount: number;
     type: 'income' | 'expense';
@@ -24,6 +26,7 @@ export interface CreateTransactionInput {
 
 export interface UpdateTransactionInput {
     account_id?: number;
+    category?: string | null;
     description?: string;
     amount?: number;
     type?: 'income' | 'expense';
@@ -54,11 +57,12 @@ export function create(input: CreateTransactionInput): Transaction {
     const amount_cents = toAmountCents(input.amount, input.type);
     const result = db
         .prepare(
-            `INSERT INTO transactions (account_id, description, amount_cents, type, date, notes)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
             input.account_id,
+            input.category ?? null,
             input.description,
             amount_cents,
             input.type,
@@ -79,11 +83,12 @@ export function update(id: number, input: UpdateTransactionInput): Transaction |
 
     db.prepare(
         `UPDATE transactions
-         SET account_id = ?, description = ?, amount_cents = ?, type = ?, date = ?, notes = ?,
+         SET account_id = ?, category = ?, description = ?, amount_cents = ?, type = ?, date = ?, notes = ?,
              updated_at = datetime('now')
          WHERE id = ? AND deleted_at IS NULL`,
     ).run(
         input.account_id ?? existing.account_id,
+        input.category !== undefined ? input.category : existing.category,
         input.description ?? existing.description,
         amount_cents,
         newType,
