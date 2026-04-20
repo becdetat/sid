@@ -1,5 +1,7 @@
 # ---- build client ----
 FROM node:20-alpine AS build-client
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 WORKDIR /app
 COPY package*.json ./
 COPY client/package*.json ./client/
