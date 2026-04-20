@@ -47,7 +47,7 @@ npm run format    # Prettier across client and server
 
 ## Self-hosting with Docker
 
-Create `docker-compose.yml` (or copy it from `/docker/docker-compose.yml`):
+Create `docker-compose.yml` (or copy it from `/docker-compose-example/docker-compose.yml`):
 
 ```yml
 services:

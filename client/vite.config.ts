@@ -2,8 +2,11 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     plugins: [react(), tailwindcss()],
+    define: {
+        __APP_VERSION__: JSON.stringify(process.env.APP_VERSION ?? 'dev'),
+    },
     server: {
         host: true,
         proxy: {
@@ -14,4 +17,4 @@ export default defineConfig({
         environment: 'happy-dom',
         setupFiles: ['./src/test-setup.ts'],
     },
-});
+}));

@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import Dashboard from './pages/Dashboard';
 import AccountDetail from './pages/AccountDetail';
 import Settings from './pages/Settings';
+import Footer from './components/Footer';
 
 const queryClient = new QueryClient();
 
@@ -11,12 +12,15 @@ export default function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
-                <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/accounts/:id" element={<AccountDetail />} />
-                    <Route path="/settings" element={<Settings />} />
-                </Routes>
+                <div className="min-h-screen flex flex-col">
+                    <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/accounts/:id" element={<AccountDetail />} />
+                        <Route path="/settings" element={<Settings />} />
+                    </Routes>
+                    <Footer />
+                </div>
             </BrowserRouter>
             <Toaster
                 position="bottom-center"
