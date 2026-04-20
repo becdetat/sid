@@ -7,6 +7,7 @@ import { balanceColor, formatCents } from '../utils/format';
 import { getDashboard } from '../api/dashboard';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLink from '../components/DashboardLink';
+import { WaveIcon } from '../components/WaveIcon';
 
 const navItems = [
     { label: 'Accounts', key: 'accounts' },
@@ -14,12 +15,6 @@ const navItems = [
 ] as const;
 
 type Section = (typeof navItems)[number]['key'];
-
-const WaveIcon = () => (
-    <svg width="32" height="14" viewBox="0 0 32 14" fill="none" className="opacity-[0.45]">
-        <path d="M0 7 Q4 2 8 7 Q12 12 16 7 Q20 2 24 7 Q28 12 32 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
-);
 
 export default function Settings() {
     const [section, setSection] = useState<Section>('accounts');

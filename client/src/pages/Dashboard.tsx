@@ -13,17 +13,12 @@ import { uploadAttachments } from '../api/attachments';
 import { formatCents, balanceColor } from '../utils/format';
 import type { DashboardAccount } from '../types/dashboard';
 import { GearIcon } from '../components/GearIcon';
+import { WaveIcon } from '../components/WaveIcon';
 
 type Modal =
     | { type: 'create' }
     | { type: 'add-transaction'; account: DashboardAccount }
     | null;
-
-const WaveIcon = () => (
-    <svg width="32" height="14" viewBox="0 0 32 14" fill="none" className="opacity-[0.45]">
-        <path d="M0 7 Q4 2 8 7 Q12 12 16 7 Q20 2 24 7 Q28 12 32 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
-);
 
 export default function Dashboard() {
     const queryClient = useQueryClient();
@@ -107,9 +102,8 @@ export default function Dashboard() {
 
                 {!isLoading && accounts.length === 0 && (
                     <div className="text-center py-[80px]">
-                        <div className="text-5xl mb-4 opacity-30">⚓</div>
                         <p className="text-[var(--text-muted)] text-[15px] mb-5">
-                            No accounts yet. Cast your first line.
+                            No accounts yet. Get started by adding one.
                         </p>
                         <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
                             Create your first account
