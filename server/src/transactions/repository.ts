@@ -39,12 +39,52 @@ function toAmountCents(amount: number, type: 'income' | 'expense'): number {
     return type === 'income' ? abs : -abs;
 }
 
-export function findByAccount(accountId: number): Transaction[] {
-    return db
-        .prepare(
-            'SELECT * FROM transactions WHERE account_id = ? AND deleted_at IS NULL ORDER BY date DESC, id DESC',
-        )
-        .all(accountId) as Transaction[];
+export interface TransactionFilters {
+    keyword?: string;
+    from?: string;
+    to?: string;
+    category?: string;
+    type?: 'income' | 'expense';
+    amountMin?: number;
+    amountMax?: number;
+}
+
+export function findByAccount(accountId: number, filters?: TransactionFilters): Transaction[] {
+    const conditions: string[] = ['account_id = ?', 'deleted_at IS NULL'];
+    const params: unknown[] = [accountId];
+
+    if (filters?.keyword) {
+        conditions.push('(description LIKE ? OR notes LIKE ?)');
+        const kw = `%${filters.keyword}%`;
+        params.push(kw, kw);
+    }
+    if (filters?.from) {
+        conditions.push('date >= ?');
+        params.push(filters.from);
+    }
+    if (filters?.to) {
+        conditions.push('date <= ?');
+        params.push(filters.to);
+    }
+    if (filters?.category) {
+        conditions.push('category = ?');
+        params.push(filters.category);
+    }
+    if (filters?.type) {
+        conditions.push('type = ?');
+        params.push(filters.type);
+    }
+    if (filters?.amountMin !== undefined) {
+        conditions.push('ABS(amount_cents) >= ?');
+        params.push(Math.round(filters.amountMin * 100));
+    }
+    if (filters?.amountMax !== undefined) {
+        conditions.push('ABS(amount_cents) <= ?');
+        params.push(Math.round(filters.amountMax * 100));
+    }
+
+    const sql = `SELECT * FROM transactions WHERE ${conditions.join(' AND ')} ORDER BY date DESC, id DESC`;
+    return db.prepare(sql).all(...params) as Transaction[];
 }
 
 export function findById(id: number): Transaction | undefined {

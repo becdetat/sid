@@ -5,8 +5,29 @@ function base(accountId: number): string {
     return `/api/accounts/${accountId}/transactions`;
 }
 
-export async function listTransactions(accountId: number): Promise<Transaction[]> {
-    const { data } = await axios.get<Transaction[]>(base(accountId));
+export interface TransactionFilters {
+    keyword?: string;
+    from?: string;
+    to?: string;
+    category?: string;
+    type?: 'income' | 'expense' | '';
+    amountMin?: string;
+    amountMax?: string;
+}
+
+export async function listTransactions(
+    accountId: number,
+    filters?: TransactionFilters,
+): Promise<Transaction[]> {
+    const params: Record<string, string> = {};
+    if (filters?.keyword) params.keyword = filters.keyword;
+    if (filters?.from) params.from = filters.from;
+    if (filters?.to) params.to = filters.to;
+    if (filters?.category) params.category = filters.category;
+    if (filters?.type) params.type = filters.type;
+    if (filters?.amountMin) params.amountMin = filters.amountMin;
+    if (filters?.amountMax) params.amountMax = filters.amountMax;
+    const { data } = await axios.get<Transaction[]>(base(accountId), { params });
     return data;
 }
 
