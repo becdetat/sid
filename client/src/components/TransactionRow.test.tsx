@@ -30,17 +30,13 @@ function renderRow(t = expense, onEdit = vi.fn(), onDelete = vi.fn()) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
         <QueryClientProvider client={client}>
-            <table>
-                <tbody>
-                    <TransactionRow
-                        transaction={t}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        isLast={false}
-                        gridTemplate="100px 150px 1fr 100px 100px"
-                    />
-                </tbody>
-            </table>
+            <TransactionRow
+                transaction={t}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                isLast={false}
+                gridTemplate="100px 150px 1fr 100px 100px"
+            />
         </QueryClientProvider>,
     );
 }
@@ -48,37 +44,37 @@ function renderRow(t = expense, onEdit = vi.fn(), onDelete = vi.fn()) {
 describe('TransactionRow', () => {
     it('renders description', () => {
         renderRow();
-        expect(screen.getByText('Coffee')).toBeTruthy();
+        expect(screen.getAllByText('Coffee').length).toBeGreaterThan(0);
     });
 
     it('renders formatted date', () => {
         renderRow();
-        expect(screen.getByText('15 Jan 2024')).toBeTruthy();
+        expect(screen.getAllByText('15 Jan 2024').length).toBeGreaterThan(0);
     });
 
     it('renders expense amount in red with minus sign', () => {
         renderRow();
-        const cell = screen.getByText('−$4.50');
-        expect(cell.style.color).toBe('var(--red)');
+        const cells = screen.getAllByText('−$4.50');
+        expect(cells[0].style.color).toBe('var(--red)');
     });
 
     it('renders income amount in green with plus sign', () => {
         renderRow(income);
-        const cell = screen.getByText('+$1,000.00');
-        expect(cell.style.color).toBe('var(--green)');
+        const cells = screen.getAllByText('+$1,000.00');
+        expect(cells[0].style.color).toBe('var(--green)');
     });
 
     it('calls onEdit when edit button is clicked', () => {
         const onEdit = vi.fn();
         renderRow(expense, onEdit);
-        fireEvent.click(screen.getByRole('button', { name: /edit coffee/i }));
+        fireEvent.click(screen.getAllByRole('button', { name: /edit coffee/i })[0]);
         expect(onEdit).toHaveBeenCalledWith(expense);
     });
 
     it('calls onDelete when delete button is clicked', () => {
         const onDelete = vi.fn();
         renderRow(expense, vi.fn(), onDelete);
-        fireEvent.click(screen.getByRole('button', { name: /delete coffee/i }));
+        fireEvent.click(screen.getAllByRole('button', { name: /delete coffee/i })[0]);
         expect(onDelete).toHaveBeenCalledWith(expense);
     });
 });
