@@ -10,7 +10,22 @@ router.get<{ accountId: string }>('/', (req, res) => {
         res.status(404).json({ error: 'account not found' });
         return;
     }
-    res.json(repo.findByAccount(accountId));
+
+    const { keyword, from, to, category, type, amountMin, amountMax } = req.query;
+    const filters: repo.TransactionFilters = {};
+    if (typeof keyword === 'string' && keyword) filters.keyword = keyword;
+    if (typeof from === 'string' && from) filters.from = from;
+    if (typeof to === 'string' && to) filters.to = to;
+    if (typeof category === 'string' && category) filters.category = category;
+    if (type === 'income' || type === 'expense') filters.type = type;
+    if (typeof amountMin === 'string' && amountMin && !isNaN(Number(amountMin))) {
+        filters.amountMin = Number(amountMin);
+    }
+    if (typeof amountMax === 'string' && amountMax && !isNaN(Number(amountMax))) {
+        filters.amountMax = Number(amountMax);
+    }
+
+    res.json(repo.findByAccount(accountId, Object.keys(filters).length > 0 ? filters : undefined));
 });
 
 router.post<{ accountId: string }>('/', (req, res) => {

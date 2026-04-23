@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -10,7 +10,9 @@ import {
     deleteTransaction,
     importTransactions,
     type TransactionPayload,
+    type TransactionFilters,
 } from '../api/transactions';
+import { getCategories } from '../api/categories';
 import { downloadImportTemplate } from '../utils/importTemplate';
 import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
@@ -45,14 +47,55 @@ export default function AccountDetail() {
     const [isImporting, setIsImporting] = useState(false);
     const importInputRef = useRef<HTMLInputElement>(null);
 
+    const [keyword, setKeyword] = useState('');
+    const [debouncedKeyword, setDebouncedKeyword] = useState('');
+    const [filterFrom, setFilterFrom] = useState('');
+    const [filterTo, setFilterTo] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterType, setFilterType] = useState<'income' | 'expense' | ''>('');
+    const [amountMin, setAmountMin] = useState('');
+    const [amountMax, setAmountMax] = useState('');
+
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedKeyword(keyword), 300);
+        return () => clearTimeout(t);
+    }, [keyword]);
+
+    const activeFilters: TransactionFilters = {
+        keyword: debouncedKeyword || undefined,
+        from: filterFrom || undefined,
+        to: filterTo || undefined,
+        category: filterCategory || undefined,
+        type: filterType || undefined,
+        amountMin: amountMin || undefined,
+        amountMax: amountMax || undefined,
+    };
+    const isFiltered = Object.values(activeFilters).some(Boolean);
+
+    function clearFilters() {
+        setKeyword('');
+        setDebouncedKeyword('');
+        setFilterFrom('');
+        setFilterTo('');
+        setFilterCategory('');
+        setFilterType('');
+        setAmountMin('');
+        setAmountMax('');
+    }
+
     const { data: account, isLoading: accountLoading } = useQuery({
         queryKey: ['accounts', accountId],
         queryFn: () => getAccount(accountId),
     });
 
     const { data: transactions = [], isLoading: txLoading } = useQuery({
-        queryKey: ['transactions', accountId],
-        queryFn: () => listTransactions(accountId),
+        queryKey: ['transactions', accountId, activeFilters],
+        queryFn: () => listTransactions(accountId, isFiltered ? activeFilters : undefined),
+    });
+
+    const { data: categories = [] } = useQuery({
+        queryKey: ['categories'],
+        queryFn: getCategories,
     });
 
     const balance = transactions.reduce((sum, t) => sum + t.amount_cents, 0);
@@ -152,7 +195,7 @@ export default function AccountDetail() {
                     </div>
                     <div className="flex items-center gap-5">
                         <span className="text-[13px] text-[var(--text-muted)] font-semibold font-body">
-                            Balance
+                            {isFiltered ? 'Filtered total' : 'Balance'}
                         </span>
                         <span className="font-display text-xl font-bold" style={{ color: balanceColor(balance) }}>
                             {formatCents(balance)}
@@ -195,16 +238,116 @@ export default function AccountDetail() {
                     </button>
                 </div>
 
+                {/* Filter bar */}
+                <div className="mb-5 bg-[var(--white)] rounded-2xl [border:1.5px_solid_var(--border)] p-4 shadow-[var(--shadow-sm)]">
+                    <div className="flex flex-wrap gap-3 items-end">
+                        <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Search</label>
+                            <input
+                                type="text"
+                                className="sid-input"
+                                placeholder="Description or notes…"
+                                value={keyword}
+                                onChange={(e) => setKeyword(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">From</label>
+                            <input
+                                type="date"
+                                className="sid-input"
+                                value={filterFrom}
+                                onChange={(e) => setFilterFrom(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">To</label>
+                            <input
+                                type="date"
+                                className="sid-input"
+                                value={filterTo}
+                                onChange={(e) => setFilterTo(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Category</label>
+                            <select
+                                className="sid-input"
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                            >
+                                <option value="">All</option>
+                                {categories.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Type</label>
+                            <select
+                                className="sid-input"
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value as 'income' | 'expense' | '')}
+                            >
+                                <option value="">All</option>
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Amount</label>
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    className="sid-input w-24"
+                                    placeholder="Min"
+                                    min="0"
+                                    value={amountMin}
+                                    onChange={(e) => setAmountMin(e.target.value)}
+                                />
+                                <span className="text-[var(--text-muted)] text-sm">–</span>
+                                <input
+                                    type="number"
+                                    className="sid-input w-24"
+                                    placeholder="Max"
+                                    min="0"
+                                    value={amountMax}
+                                    onChange={(e) => setAmountMax(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        {isFiltered && (
+                            <button
+                                className="sid-btn sid-btn-ghost sid-btn-sm self-end"
+                                onClick={clearFilters}
+                            >
+                                Clear filters
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 {txLoading && (
                     <p className="text-sm text-[var(--text-muted)]">Loading…</p>
                 )}
 
                 {!txLoading && transactions.length === 0 && (
                     <div className="text-center py-[60px]">
-                        <p className="text-[var(--text-muted)] text-sm mb-4">No transactions yet.</p>
-                        <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
-                            Add first transaction
-                        </button>
+                        {isFiltered ? (
+                            <>
+                                <p className="text-[var(--text-muted)] text-sm mb-4">No transactions match your filters.</p>
+                                <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={clearFilters}>
+                                    Clear filters
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-[var(--text-muted)] text-sm mb-4">No transactions yet.</p>
+                                <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
+                                    Add first transaction
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
 
