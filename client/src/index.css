@@ -203,3 +203,10 @@ body {
 /* Font utilities */
 .font-display { font-family: var(--font-display); }
 .font-body { font-family: var(--font-body); }
+
+/* Mobile: prevent iOS input zoom (font-size must be ≥16px) */
+@media (max-width: 640px) {
+  .sid-input { font-size: 16px; }
+  .sid-modal-overlay { padding: 16px; }
+  .sid-icon-btn { padding: 8px; }
+}

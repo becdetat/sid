@@ -40,46 +40,96 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
         enabled: expanded,
     });
 
+    const typeBadge = (
+        <span className={`inline-block px-2 py-[3px] rounded-full text-[11px] font-bold ${isIncome ? 'bg-[var(--green-light)] text-[var(--green)]' : 'bg-[var(--red-light)] text-[var(--red)]'}`}>
+            {transaction.type}
+        </span>
+    );
+
     return (
         <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--cream-mid)' }}>
-            {/* Main row */}
+            {/* Clickable row */}
             <div
-                className="group grid cursor-pointer items-center px-5 py-[13px] hover:bg-[var(--cream)] transition-colors duration-[120ms]"
-                style={{ gridTemplateColumns: gridTemplate, borderBottom: expanded ? '1px solid var(--cream-mid)' : 'none' }}
+                className="group cursor-pointer hover:bg-[var(--cream)] transition-colors duration-[120ms]"
+                style={{ borderBottom: expanded ? '1px solid var(--cream-mid)' : 'none' }}
                 onClick={() => setExpanded((e) => !e)}
             >
-                <span className="text-[13px] text-[var(--text-muted)]">{formatDate(transaction.date)}</span>
-                <span className="text-xs text-[var(--text-muted)]">{transaction.category ?? ''}</span>
-                <span className="text-[13px] text-[var(--text-primary)] font-semibold">{transaction.description}</span>
-                <span>
-                    <span className={`inline-block px-2 py-[3px] rounded-full text-[11px] font-bold ${isIncome ? 'bg-[var(--green-light)] text-[var(--green)]' : 'bg-[var(--red-light)] text-[var(--red)]'}`}>
-                        {transaction.type}
+                {/* Mobile layout */}
+                <div className="sm:hidden px-4 py-3 flex flex-col gap-1.5">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[13px] text-[var(--text-primary)] font-semibold leading-snug">
+                                {transaction.description}
+                            </div>
+                            <div className="text-xs text-[var(--text-muted)] mt-0.5 flex flex-wrap items-center gap-1">
+                                <span>{formatDate(transaction.date)}</span>
+                                {transaction.category && (
+                                    <>
+                                        <span>·</span>
+                                        <span>{transaction.category}</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                            <div className="text-[13px] font-bold" style={{ color: balanceColor(transaction.amount_cents) }}>
+                                {formatCents(transaction.amount_cents)}
+                            </div>
+                            <div className="mt-0.5">{typeBadge}</div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-0.5">
+                        <button
+                            aria-label={`Edit ${transaction.description}`}
+                            onClick={(e) => { e.stopPropagation(); onEdit(transaction); }}
+                            className="sid-icon-btn"
+                        >
+                            <EditIcon />
+                        </button>
+                        <button
+                            aria-label={`Delete ${transaction.description}`}
+                            onClick={(e) => { e.stopPropagation(); onDelete(transaction); }}
+                            className="sid-icon-btn danger"
+                        >
+                            <TrashIcon />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Desktop layout */}
+                <div
+                    className="hidden sm:grid items-center px-5 py-[13px]"
+                    style={{ gridTemplateColumns: gridTemplate }}
+                >
+                    <span className="text-[13px] text-[var(--text-muted)]">{formatDate(transaction.date)}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{transaction.category ?? ''}</span>
+                    <span className="text-[13px] text-[var(--text-primary)] font-semibold">{transaction.description}</span>
+                    <span>{typeBadge}</span>
+                    <span className="text-[13px] font-bold text-right" style={{ color: balanceColor(transaction.amount_cents) }}>
+                        {formatCents(transaction.amount_cents)}
                     </span>
-                </span>
-                <span className="text-[13px] font-bold text-right" style={{ color: balanceColor(transaction.amount_cents) }}>
-                    {formatCents(transaction.amount_cents)}
-                </span>
-                <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    <button
-                        aria-label={`Edit ${transaction.description}`}
-                        onClick={(e) => { e.stopPropagation(); onEdit(transaction); }}
-                        className="sid-icon-btn"
-                    >
-                        <EditIcon />
-                    </button>
-                    <button
-                        aria-label={`Delete ${transaction.description}`}
-                        onClick={(e) => { e.stopPropagation(); onDelete(transaction); }}
-                        className="sid-icon-btn danger"
-                    >
-                        <TrashIcon />
-                    </button>
+                    <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <button
+                            aria-label={`Edit ${transaction.description}`}
+                            onClick={(e) => { e.stopPropagation(); onEdit(transaction); }}
+                            className="sid-icon-btn"
+                        >
+                            <EditIcon />
+                        </button>
+                        <button
+                            aria-label={`Delete ${transaction.description}`}
+                            onClick={(e) => { e.stopPropagation(); onDelete(transaction); }}
+                            className="sid-icon-btn danger"
+                        >
+                            <TrashIcon />
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Expanded detail panel */}
             {expanded && (
-                <div className="px-5 py-4 bg-[var(--cream)] flex flex-col gap-3">
+                <div className="px-4 sm:px-5 py-4 bg-[var(--cream)] flex flex-col gap-3">
                     {transaction.notes && (
                         <div>
                             <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] mb-1">Notes</div>
