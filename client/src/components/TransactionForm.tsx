@@ -93,6 +93,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
         setCategory(value);
         setShowSuggestions(false);
+        if (!description.trim()) setDescription(value);
     }
 
     function validate(): boolean {
@@ -156,7 +157,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                     className="sid-input"
                                     placeholder="e.g. Shopping"
                                     value={category}
-                                    onChange={(e) => { setCategory(e.target.value); setShowSuggestions(true); }}
+                                    onChange={(e) => { setCategory(e.target.value); setShowSuggestions(true); if (!description.trim()) setDescription(e.target.value); }}
                                     onFocus={() => setShowSuggestions(true)}
                                     onBlur={handleCategoryBlur}
                                     onKeyDown={(e) => { if (e.key === 'Escape') setShowSuggestions(false); }}

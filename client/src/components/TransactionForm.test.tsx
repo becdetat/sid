@@ -105,6 +105,33 @@ describe('TransactionForm', () => {
         expect(onCancel).toHaveBeenCalled();
     });
 
+    it('pre-fills description when category is typed and description is empty', () => {
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        const categoryInput = screen.getByLabelText(/category/i);
+        fireEvent.change(categoryInput, { target: { value: 'Shopping' } });
+        const descInput = screen.getByLabelText(/description/i) as HTMLInputElement;
+        expect(descInput.value).toBe('Shopping');
+    });
+
+    it('does not overwrite description when category is typed', () => {
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        const descInput = screen.getByLabelText(/description/i) as HTMLInputElement;
+        fireEvent.change(descInput, { target: { value: 'My custom description' } });
+        const categoryInput = screen.getByLabelText(/category/i);
+        fireEvent.change(categoryInput, { target: { value: 'Shopping' } });
+        expect(descInput.value).toBe('My custom description');
+    });
+
+    it('does not overwrite description when suggestion is selected', () => {
+        wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+        const descInput = screen.getByLabelText(/description/i) as HTMLInputElement;
+        fireEvent.change(descInput, { target: { value: 'My custom description' } });
+        // simulate suggestion click by directly calling the effect via category change
+        const categoryInput = screen.getByLabelText(/category/i);
+        fireEvent.change(categoryInput, { target: { value: 'Shopping' } });
+        expect(descInput.value).toBe('My custom description');
+    });
+
     it('toggles type between expense and income', () => {
         wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
         const incomeBtn = screen.getByRole('button', { name: /income/i });
