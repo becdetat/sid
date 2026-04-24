@@ -40,10 +40,11 @@ router.get('/', (_req, res) => {
             r.type AS t_type,
             r.date AS t_date
         FROM accounts a
+        INNER JOIN dashboard_config dc ON dc.account_id = a.id
         LEFT JOIN balances b ON b.account_id = a.id
         LEFT JOIN ranked r ON r.account_id = a.id AND r.rn <= 5
         WHERE a.deleted_at IS NULL
-        ORDER BY a.name, r.date DESC, r.id DESC
+        ORDER BY dc.position, r.date DESC, r.id DESC
     `,
         )
         .all() as DashboardRow[];

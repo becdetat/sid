@@ -33,6 +33,11 @@ export function importMerge(payload: BackupPayload): ImportResult {
     const insertAttachment = db.prepare(`INSERT INTO attachments (transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
     const findActiveByName = db.prepare(`SELECT id FROM accounts WHERE lower(name) = lower(?) AND deleted_at IS NULL`);
 
+    const insertDashboardConfig = db.prepare(
+        `INSERT INTO dashboard_config (account_id, position)
+         VALUES (?, COALESCE((SELECT MAX(position) FROM dashboard_config), 0) + 1)`,
+    );
+
     const run = db.transaction((p: BackupPayload) => {
         const timestamp = formatTimestamp(new Date());
         const accountIdMap = new Map<number, number>();
@@ -42,7 +47,11 @@ export function importMerge(payload: BackupPayload): ImportResult {
             const conflict = findActiveByName.get(account.name) as { id: number } | undefined;
             const name = conflict ? `${account.name} ${timestamp}` : account.name;
             const result = insertAccount.run(name, account.created_at, account.deleted_at);
-            accountIdMap.set(account.id, result.lastInsertRowid as number);
+            const newId = result.lastInsertRowid as number;
+            accountIdMap.set(account.id, newId);
+            if (!account.deleted_at) {
+                insertDashboardConfig.run(newId);
+            }
         }
 
         for (const tx of p.transactions) {
@@ -78,6 +87,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
     const insertAttachment = db.prepare(`INSERT INTO attachments (id, transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 
     const run = db.transaction((p: BackupPayload) => {
+        db.prepare(`DELETE FROM dashboard_config`).run();
         db.prepare(`DELETE FROM attachments`).run();
         db.prepare(`DELETE FROM transactions`).run();
         db.prepare(`DELETE FROM accounts`).run();
@@ -85,6 +95,14 @@ export function importWipe(payload: BackupPayload): ImportResult {
         for (const account of p.accounts) {
             insertAccount.run(account.id, account.name, account.created_at, account.deleted_at);
         }
+
+        // Re-seed dashboard_config for all non-deleted accounts in alphabetical order
+        db.prepare(`
+            INSERT INTO dashboard_config (account_id, position)
+            SELECT id, ROW_NUMBER() OVER (ORDER BY name) AS position
+            FROM accounts
+            WHERE deleted_at IS NULL
+        `).run();
 
         for (const tx of p.transactions) {
             insertTransaction.run(

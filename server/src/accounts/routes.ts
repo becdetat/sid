@@ -1,10 +1,34 @@
 import { Router } from 'express';
+import db from '../db';
 import * as repo from './repository';
+import * as dashboardConfig from '../dashboard-config/repository';
 
 const router = Router();
 
 router.get('/', (_req, res) => {
     res.json(repo.findAll());
+});
+
+// Must be registered before /:id to avoid Express matching 'balances' as an ID
+router.get('/balances', (_req, res) => {
+    const rows = db
+        .prepare(
+            `
+        WITH balances AS (
+            SELECT account_id, SUM(amount_cents) AS balance_cents
+            FROM transactions
+            WHERE deleted_at IS NULL
+            GROUP BY account_id
+        )
+        SELECT a.id, a.name, COALESCE(b.balance_cents, 0) AS balance_cents
+        FROM accounts a
+        LEFT JOIN balances b ON b.account_id = a.id
+        WHERE a.deleted_at IS NULL
+        ORDER BY a.name
+    `,
+        )
+        .all();
+    res.json(rows);
 });
 
 router.post('/', (req, res) => {
@@ -18,6 +42,7 @@ router.post('/', (req, res) => {
         return;
     }
     const account = repo.create(name.trim());
+    dashboardConfig.add(account.id);
     res.status(201).json(account);
 });
 

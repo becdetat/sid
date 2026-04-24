@@ -1,30 +1,40 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AccountsSection from '../components/settings/AccountsSection';
+import DashboardSection from '../components/settings/DashboardSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
 import { GearIcon } from '../components/GearIcon';
 import { balanceColor, formatCents } from '../utils/format';
-import { getDashboard } from '../api/dashboard';
+import { listAccountsWithBalances } from '../api/accounts';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLink from '../components/DashboardLink';
 import { WaveIcon } from '../components/WaveIcon';
 
 const navItems = [
     { label: 'Accounts', key: 'accounts' },
+    { label: 'Dashboard', key: 'dashboard' },
     { label: 'Import / Export', key: 'import-export' },
 ] as const;
 
 type Section = (typeof navItems)[number]['key'];
 
-export default function Settings() {
-    const [section, setSection] = useState<Section>('accounts');
+function isValidSection(s: string | null): s is Section {
+    return navItems.some((item) => item.key === s);
+}
 
-    const { data: accounts = [] } = useQuery({
-        queryKey: ['dashboard'],
-        queryFn: getDashboard,
+export default function Settings() {
+    const [searchParams] = useSearchParams();
+    const initialSection = searchParams.get('section');
+    const [section, setSection] = useState<Section>(
+        isValidSection(initialSection) ? initialSection : 'accounts',
+    );
+
+    const { data: accountsWithBalances = [] } = useQuery({
+        queryKey: ['accounts-balances'],
+        queryFn: listAccountsWithBalances,
     });
 
-    const totalBalance = accounts.reduce((s, a) => s + a.balance_cents, 0);
+    const totalBalance = accountsWithBalances.reduce((s, a) => s + a.balance_cents, 0);
 
     return (
         <div className="min-h-screen">
@@ -77,6 +87,7 @@ export default function Settings() {
                     {/* Content panel */}
                     <div className="flex-1 min-w-0 w-full">
                         {section === 'accounts' && <AccountsSection />}
+                        {section === 'dashboard' && <DashboardSection />}
                         {section === 'import-export' && <ImportExportSection />}
                     </div>
                 </div>

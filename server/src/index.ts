@@ -7,6 +7,7 @@ import accountRoutes from './accounts/routes';
 import transactionRoutes from './transactions/routes';
 import { txAttachmentRouter, attachmentRouter } from './attachments/routes';
 import dashboardRoutes from './dashboard/routes';
+import dashboardConfigRoutes from './dashboard-config/routes';
 import exportRoutes from './export/routes';
 import importRoutes from './import/routes';
 import categoriesRoutes from './categories/routes';
@@ -26,6 +27,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/backup', backupExportRoutes);
 app.use('/api/backup', backupImportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard-config', dashboardConfigRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/accounts/:id/export', exportRoutes);
 app.use('/api/accounts', accountRoutes);

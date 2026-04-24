@@ -63,9 +63,14 @@ export function softDelete(id: number): boolean {
         AND deleted_at IS NULL
     `);
 
+    const deleteDashboardConfig = db.prepare(
+        'DELETE FROM dashboard_config WHERE account_id = ?',
+    );
+
     const run = db.transaction((accountId: number) => {
         softDeleteAttachments.run(accountId);
         softDeleteTransactions.run(accountId);
+        deleteDashboardConfig.run(accountId);
         const result = softDeleteAccounts.run(accountId);
         return result.changes > 0;
     });

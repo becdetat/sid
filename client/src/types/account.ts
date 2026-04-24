@@ -5,3 +5,9 @@ export interface Account {
     deleted_at: string | null;
     transaction_count: number;
 }
+
+export interface AccountWithBalance {
+    id: number;
+    name: string;
+    balance_cents: number;
+}

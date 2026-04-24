@@ -7,7 +7,7 @@ import AccountForm from '../components/AccountForm';
 import SkeletonCard from '../components/SkeletonCard';
 import TransactionForm from '../components/TransactionForm';
 import { getDashboard } from '../api/dashboard';
-import { createAccount } from '../api/accounts';
+import { createAccount, listAccountsWithBalances } from '../api/accounts';
 import { createTransaction, type TransactionPayload } from '../api/transactions';
 import { uploadAttachments } from '../api/attachments';
 import { formatCents, balanceColor } from '../utils/format';
@@ -29,10 +29,16 @@ export default function Dashboard() {
         queryFn: getDashboard,
     });
 
+    const { data: allAccountsWithBalances = [] } = useQuery({
+        queryKey: ['accounts-balances'],
+        queryFn: listAccountsWithBalances,
+    });
+
     const createMutation = useMutation({
         mutationFn: (name: string) => createAccount(name),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
             setModal(null);
             toast.success('Account created.');
         },
@@ -49,6 +55,7 @@ export default function Dashboard() {
         if (modal?.type !== 'add-transaction') return;
         const tx = await addTransactionMutation.mutateAsync({ accountId: modal.account.id, data });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
         if (pendingFiles.length > 0) {
             try {
                 await uploadAttachments(tx.id, pendingFiles);
@@ -62,7 +69,9 @@ export default function Dashboard() {
         toast.success('Transaction added.');
     }
 
-    const totalBalance = accounts.reduce((s, a) => s + a.balance_cents, 0);
+    const totalBalance = allAccountsWithBalances.reduce((s, a) => s + a.balance_cents, 0);
+    const noAccountsInSystem = !isLoading && allAccountsWithBalances.length === 0;
+    const accountsExistButNoneConfigured = !isLoading && allAccountsWithBalances.length > 0 && accounts.length === 0;
 
     return (
         <div className="min-h-screen">
@@ -100,7 +109,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {!isLoading && accounts.length === 0 && (
+                {noAccountsInSystem && (
                     <div className="text-center py-[80px]">
                         <p className="text-[var(--text-muted)] text-[15px] mb-5">
                             No accounts yet. Get started by adding one.
@@ -111,16 +120,37 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {!isLoading && accounts.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
-                        {accounts.map((account) => (
-                            <AccountCard
-                                key={account.id}
-                                account={account}
-                                onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
-                            />
-                        ))}
+                {accountsExistButNoneConfigured && (
+                    <div className="text-center py-[80px]">
+                        <p className="text-[var(--text-muted)] text-[15px] mb-5">
+                            No accounts are configured for the dashboard.
+                        </p>
+                        <Link to="/settings?section=dashboard" className="sid-btn sid-btn-primary">
+                            Configure dashboard
+                        </Link>
                     </div>
+                )}
+
+                {!isLoading && accounts.length > 0 && (
+                    <>
+                        <div className="flex items-center justify-between mb-5">
+                            <Link
+                                to="/accounts"
+                                className="text-[13px] font-semibold font-body text-[var(--teak)] no-underline hover:underline"
+                            >
+                                All accounts →
+                            </Link>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
+                            {accounts.map((account) => (
+                                <AccountCard
+                                    key={account.id}
+                                    account={account}
+                                    onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
+                                />
+                            ))}
+                        </div>
+                    </>
                 )}
             </main>
 

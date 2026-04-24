@@ -59,4 +59,23 @@ try {
     // column already exists
 }
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS dashboard_config (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id  INTEGER NOT NULL REFERENCES accounts(id),
+        position    INTEGER NOT NULL
+    );
+`);
+
+// Seed dashboard_config for existing accounts on first run (no-op if already populated)
+const seeded = (db.prepare('SELECT COUNT(*) AS cnt FROM dashboard_config').get() as { cnt: number }).cnt;
+if (seeded === 0) {
+    db.exec(`
+        INSERT INTO dashboard_config (account_id, position)
+        SELECT id, ROW_NUMBER() OVER (ORDER BY name) AS position
+        FROM accounts
+        WHERE deleted_at IS NULL
+    `);
+}
+
 export default db;

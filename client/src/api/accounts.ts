@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Account } from '../types/account';
+import type { Account, AccountWithBalance } from '../types/account';
 
 const base = '/api/accounts';
 
@@ -25,4 +25,9 @@ export async function updateAccount(id: number, name: string): Promise<Account> 
 
 export async function deleteAccount(id: number): Promise<void> {
     await axios.delete(`${base}/${id}`);
+}
+
+export async function listAccountsWithBalances(): Promise<AccountWithBalance[]> {
+    const { data } = await axios.get<AccountWithBalance[]>(`${base}/balances`);
+    return data;
 }

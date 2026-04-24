@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Dashboard from './pages/Dashboard';
 import AccountDetail from './pages/AccountDetail';
+import AllAccounts from './pages/AllAccounts';
 import Settings from './pages/Settings';
 import Footer from './components/Footer';
 
@@ -16,6 +17,7 @@ export default function App() {
                     <Routes>
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/accounts" element={<AllAccounts />} />
                         <Route path="/accounts/:id" element={<AccountDetail />} />
                         <Route path="/settings" element={<Settings />} />
                     </Routes>
