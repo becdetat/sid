@@ -14,6 +14,8 @@ import { formatCents, balanceColor } from '../utils/format';
 import type { DashboardAccount } from '../types/dashboard';
 import { GearIcon } from '../components/GearIcon';
 import { WaveIcon } from '../components/WaveIcon';
+import { Page } from '../components/Page';
+import PageLink from '../components/PageLink';
 
 type Modal =
     | { type: 'create' }
@@ -74,85 +76,49 @@ export default function Dashboard() {
     const accountsExistButNoneConfigured = !isLoading && allAccountsWithBalances.length > 0 && accounts.length === 0;
 
     return (
-        <div className="min-h-screen">
-            {/* Nav */}
-            <header className="bg-[var(--white)] [border-bottom:1.5px_solid_var(--border)] shadow-[0_1px_0_var(--cream-dark)] sticky top-0 z-[100]">
-                <div className="max-w-[1100px] mx-auto px-4 sm:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                        <h1 className="font-display text-[22px] sm:text-[26px] font-bold text-[var(--teak-dark)] tracking-[-0.02em] leading-none shrink-0">
-                            <a href="/">Sid</a>
-                        </h1>
-                        <WaveIcon />
-                        <h2 className="font-display text-lg sm:text-xl font-bold text-[var(--teak-dark)] m-0 truncate">
-                            Dashboard
-                        </h2>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                        <span className="hidden sm:inline text-[13px] text-[var(--text-muted)] font-semibold font-body">
-                            Net
-                        </span>
-                        <span className="font-display text-base sm:text-xl font-bold" style={{ color: balanceColor(totalBalance) }}>
-                            {formatCents(totalBalance)}
-                        </span>
-                        <Link to="/settings" aria-label="Settings" className="sid-icon-btn">
-                            <GearIcon />
-                        </Link>
-                    </div>
+        <Page pageTitle="Dashboard" balance={totalBalance}>
+            {isLoading && (
+                <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
+                    {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
                 </div>
-                <div className="sid-header-stripe" />
-            </header>
+            )}
 
-            <main className="max-w-[1100px] mx-auto px-4 sm:px-8 py-5 sm:py-[36px]">
-                {isLoading && (
+            {noAccountsInSystem && (
+                <div className="text-center py-[80px]">
+                    <p className="text-[var(--text-muted)] text-[15px] mb-5">
+                        No accounts yet. Get started by adding one.
+                    </p>
+                    <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
+                        Create your first account
+                    </button>
+                </div>
+            )}
+
+            {accountsExistButNoneConfigured && (
+                <div className="text-center py-[80px]">
+                    <p className="text-[var(--text-muted)] text-[15px] mb-5">
+                        No accounts are configured for the dashboard.
+                    </p>
+                    <Link to="/settings?section=dashboard" className="sid-btn sid-btn-primary">
+                        Configure dashboard
+                    </Link>
+                </div>
+            )}
+
+            {!isLoading && accounts.length > 0 && (
+                <>
+                    <PageLink to="/accounts">All accounts → </PageLink>
                     <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
-                        {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+                        {accounts.map((account) => (
+                            <AccountCard
+                                key={account.id}
+                                account={account}
+                                onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
+                            />
+                        ))}
                     </div>
-                )}
-
-                {noAccountsInSystem && (
-                    <div className="text-center py-[80px]">
-                        <p className="text-[var(--text-muted)] text-[15px] mb-5">
-                            No accounts yet. Get started by adding one.
-                        </p>
-                        <button className="sid-btn sid-btn-primary" onClick={() => setModal({ type: 'create' })}>
-                            Create your first account
-                        </button>
-                    </div>
-                )}
-
-                {accountsExistButNoneConfigured && (
-                    <div className="text-center py-[80px]">
-                        <p className="text-[var(--text-muted)] text-[15px] mb-5">
-                            No accounts are configured for the dashboard.
-                        </p>
-                        <Link to="/settings?section=dashboard" className="sid-btn sid-btn-primary">
-                            Configure dashboard
-                        </Link>
-                    </div>
-                )}
-
-                {!isLoading && accounts.length > 0 && (
-                    <>
-                        <div className="flex items-center justify-between mb-5">
-                            <Link
-                                to="/accounts"
-                                className="text-[13px] font-semibold font-body text-[var(--teak)] no-underline hover:underline"
-                            >
-                                All accounts →
-                            </Link>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
-                            {accounts.map((account) => (
-                                <AccountCard
-                                    key={account.id}
-                                    account={account}
-                                    onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
-            </main>
+                </>
+            )}
 
             {modal?.type === 'create' && (
                 <AccountForm
@@ -167,6 +133,6 @@ export default function Dashboard() {
                     onCancel={() => setModal(null)}
                 />
             )}
-        </div>
+        </Page>
     );
 }

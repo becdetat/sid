@@ -7,8 +7,9 @@ import { GearIcon } from '../components/GearIcon';
 import { balanceColor, formatCents } from '../utils/format';
 import { listAccountsWithBalances } from '../api/accounts';
 import { useQuery } from '@tanstack/react-query';
-import DashboardLink from '../components/DashboardLink';
 import { WaveIcon } from '../components/WaveIcon';
+import { Page } from '../components/Page';
+import PageLink from '../components/PageLink';
 
 const navItems = [
     { label: 'Accounts', key: 'accounts' },
@@ -37,61 +38,33 @@ export default function Settings() {
     const totalBalance = accountsWithBalances.reduce((s, a) => s + a.balance_cents, 0);
 
     return (
-        <div className="min-h-screen">
-            <header className="bg-[var(--white)] [border-bottom:1.5px_solid_var(--border)] shadow-[0_1px_0_var(--cream-dark)] sticky top-0 z-[100]">
-                <div className="max-w-[1100px] mx-auto px-4 sm:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                        <h1 className="font-display text-[22px] sm:text-[26px] font-bold text-[var(--teak-dark)] tracking-[-0.02em] leading-none shrink-0">
-                            <a href="/">Sid</a>
-                        </h1>
-                        <WaveIcon />
-                        <h2 className="font-display text-lg sm:text-xl font-bold text-[var(--teak-dark)] m-0 truncate">
-                            Settings
-                        </h2>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                        <span className="hidden sm:inline text-[13px] text-[var(--text-muted)] font-semibold font-body">
-                            Net
-                        </span>
-                        <span className="font-display text-base sm:text-xl font-bold" style={{ color: balanceColor(totalBalance) }}>
-                            {formatCents(totalBalance)}
-                        </span>
-                        <Link to="/settings" aria-label="Settings" className="sid-icon-btn">
-                            <GearIcon />
-                        </Link>
-                    </div>
+        <Page pageTitle="Settings" balance={totalBalance}>
+            <PageLink to="/dashboard">&larr; Back to dashboard</PageLink>
+
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-12 items-start">
+                {/* Sidebar */}
+                <nav className="w-full sm:w-[180px] sm:shrink-0">
+                    <ul className="list-none m-0 p-0 flex flex-row sm:flex-col gap-1 overflow-x-auto">
+                        {navItems.map((item) => (
+                            <li key={item.key} className="shrink-0">
+                                <button
+                                    onClick={() => setSection(item.key)}
+                                    className={`block w-full text-left px-3 py-2 rounded-[8px] text-sm font-semibold font-body border-none cursor-pointer whitespace-nowrap ${section === item.key ? 'bg-[var(--cream)] text-[var(--teak-dark)]' : 'bg-transparent text-[var(--text-secondary)]'}`}
+                                >
+                                    {item.label}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+
+                {/* Content panel */}
+                <div className="flex-1 min-w-0 w-full">
+                    {section === 'accounts' && <AccountsSection />}
+                    {section === 'dashboard' && <DashboardSection />}
+                    {section === 'import-export' && <ImportExportSection />}
                 </div>
-                <div className="sid-header-stripe" />
-            </header>
-
-            <main className="max-w-[1100px] mx-auto px-4 sm:px-8 py-5 sm:py-[36px]">
-                <DashboardLink />
-
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-12 items-start">
-                    {/* Sidebar */}
-                    <nav className="w-full sm:w-[180px] sm:shrink-0">
-                        <ul className="list-none m-0 p-0 flex flex-row sm:flex-col gap-1 overflow-x-auto">
-                            {navItems.map((item) => (
-                                <li key={item.key} className="shrink-0">
-                                    <button
-                                        onClick={() => setSection(item.key)}
-                                        className={`block w-full text-left px-3 py-2 rounded-[8px] text-sm font-semibold font-body border-none cursor-pointer whitespace-nowrap ${section === item.key ? 'bg-[var(--cream)] text-[var(--teak-dark)]' : 'bg-transparent text-[var(--text-secondary)]'}`}
-                                    >
-                                        {item.label}
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    </nav>
-
-                    {/* Content panel */}
-                    <div className="flex-1 min-w-0 w-full">
-                        {section === 'accounts' && <AccountsSection />}
-                        {section === 'dashboard' && <DashboardSection />}
-                        {section === 'import-export' && <ImportExportSection />}
-                    </div>
-                </div>
-            </main>
-        </div>
+            </div>
+        </Page>
     );
 }
