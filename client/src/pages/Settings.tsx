@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import AccountsSection from '../components/settings/AccountsSection';
 import DashboardSection from '../components/settings/DashboardSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
-import { GearIcon } from '../components/GearIcon';
-import { balanceColor, formatCents } from '../utils/format';
 import { listAccountsWithBalances } from '../api/accounts';
 import { useQuery } from '@tanstack/react-query';
-import { WaveIcon } from '../components/WaveIcon';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
