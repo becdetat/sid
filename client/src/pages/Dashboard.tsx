@@ -78,12 +78,11 @@ export default function Dashboard() {
         toast.success('Transaction added.');
     }
 
-    const totalBalance = allAccountsWithBalances.reduce((s, a) => s + a.balance_cents, 0);
     const noAccountsInSystem = !configLoading && allAccountsWithBalances.length === 0;
     const tilesExistButNoneConfigured = !configLoading && allAccountsWithBalances.length > 0 && tileConfig.length === 0;
 
     return (
-        <Page pageTitle="Dashboard" balance={totalBalance}>
+        <Page pageTitle="Dashboard">
             {configLoading && (
                 <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
                     {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
