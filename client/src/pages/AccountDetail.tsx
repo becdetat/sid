@@ -18,7 +18,6 @@ import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
-import ExportDialog from '../components/ExportDialog';
 import type { Transaction } from '../types/transaction';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
@@ -29,6 +28,70 @@ type Modal =
     | { type: 'delete'; transaction: Transaction }
     | null;
 
+function ActionsDropdown({
+    onDownloadTemplate,
+    onImportCsv,
+    onExportCsv,
+    isImporting,
+}: {
+    onDownloadTemplate: () => void;
+    onImportCsv: () => void;
+    onExportCsv: () => void;
+    isImporting: boolean;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    function pick(fn: () => void) {
+        setOpen(false);
+        fn();
+    }
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                className="sid-btn sid-btn-ghost sid-btn-sm"
+                onClick={() => setOpen((o) => !o)}
+                disabled={isImporting}
+            >
+                {isImporting ? 'Importing…' : 'Actions ▾'}
+            </button>
+            {open && (
+                <div className="absolute right-0 z-10 mt-1 min-w-[170px] rounded-xl bg-[var(--white)] [border:1.5px_solid_var(--border)] shadow-[var(--shadow-md)] py-1">
+                    <button
+                        className="w-full text-left px-4 py-2 text-sm font-body text-[var(--text)] hover:bg-[var(--cream)] transition-colors"
+                        onClick={() => pick(onDownloadTemplate)}
+                    >
+                        Download template
+                    </button>
+                    <button
+                        className="w-full text-left px-4 py-2 text-sm font-body text-[var(--text)] hover:bg-[var(--cream)] transition-colors"
+                        onClick={() => pick(onImportCsv)}
+                    >
+                        Import CSV
+                    </button>
+                    <button
+                        className="w-full text-left px-4 py-2 text-sm font-body text-[var(--text)] hover:bg-[var(--cream)] transition-colors"
+                        onClick={() => pick(onExportCsv)}
+                    >
+                        Export CSV
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 const TX_GRID = '130px 120px 1fr 90px 120px 72px';
 
 export default function AccountDetail() {
@@ -36,7 +99,6 @@ export default function AccountDetail() {
     const accountId = parseInt(id!, 10);
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
-    const [showExport, setShowExport] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,6 +209,23 @@ export default function AccountDetail() {
         toast.success('Transaction updated.');
     }
 
+    function handleExportCsv() {
+        const params = new URLSearchParams();
+        if (activeFilters.keyword) params.set('keyword', activeFilters.keyword);
+        if (activeFilters.from) params.set('from', activeFilters.from);
+        if (activeFilters.to) params.set('to', activeFilters.to);
+        if (activeFilters.category) params.set('category', activeFilters.category);
+        if (activeFilters.type) params.set('type', activeFilters.type);
+        if (activeFilters.amountMin) params.set('amountMin', activeFilters.amountMin);
+        if (activeFilters.amountMax) params.set('amountMax', activeFilters.amountMax);
+        const qs = params.toString();
+        const a = document.createElement('a');
+        a.href = `/api/accounts/${accountId}/export${qs ? `?${qs}` : ''}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
     async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -188,19 +267,12 @@ export default function AccountDetail() {
                     className="hidden"
                     onChange={handleImport}
                 />
-                <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={downloadImportTemplate}>
-                    Download template
-                </button>
-                <button
-                    className="sid-btn sid-btn-ghost sid-btn-sm"
-                    onClick={() => importInputRef.current?.click()}
-                    disabled={isImporting}
-                >
-                    {isImporting ? 'Importing…' : 'Import CSV'}
-                </button>
-                <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={() => setShowExport(true)}>
-                    Export CSV
-                </button>
+                <ActionsDropdown
+                    onDownloadTemplate={downloadImportTemplate}
+                    onImportCsv={() => importInputRef.current?.click()}
+                    onExportCsv={handleExportCsv}
+                    isImporting={isImporting}
+                />
                 <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
                     + New transaction
                 </button>
@@ -357,15 +429,6 @@ export default function AccountDetail() {
                     initial={modal.transaction}
                     onSubmit={(data, files) => handleUpdate(modal.transaction.id, data, files)}
                     onCancel={() => setModal(null)}
-                />
-            )}
-            {showExport && (
-                <ExportDialog
-                    accountId={accountId}
-                    accountName={account.name}
-                    defaultFrom={transactions.at(-1)?.date ?? ''}
-                    defaultTo={new Date().toISOString().slice(0, 10)}
-                    onCancel={() => setShowExport(false)}
                 />
             )}
             {modal?.type === 'delete' && (
