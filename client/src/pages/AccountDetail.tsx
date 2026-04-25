@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getAccount } from '../api/accounts';
@@ -97,6 +97,8 @@ const TX_GRID = '130px 120px 1fr 90px 120px 72px';
 export default function AccountDetail() {
     const { id } = useParams<{ id: string }>();
     const accountId = parseInt(id!, 10);
+    const location = useLocation();
+    const fromAllAccounts = (location.state as any)?.from === 'all-accounts';
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [isImporting, setIsImporting] = useState(false);
@@ -256,7 +258,9 @@ export default function AccountDetail() {
             pageTitle={account.name} 
             balance={balance} 
         >
-            <PageLink to="/dashboard">&larr; Back to dashboard</PageLink>
+            <PageLink to={fromAllAccounts ? '/accounts' : '/dashboard'}>
+                &larr; {fromAllAccounts ? 'Back to all accounts' : 'Back to dashboard'}
+            </PageLink>
 
             {/* Action bar */}
             <div className="flex flex-wrap justify-end gap-2 mb-5 sm:mb-7">

@@ -48,6 +48,7 @@ export default function AllAccounts() {
                                 <td className="p-3">
                                     <Link
                                         to={`/accounts/${account.id}`}
+                                        state={{ from: 'all-accounts' }}
                                         className="text-sm font-semibold text-[var(--text-primary)] font-body no-underline block"
                                     >
                                         {account.name}
@@ -56,6 +57,7 @@ export default function AllAccounts() {
                                 <td className="p-3 text-right">
                                     <Link
                                         to={`/accounts/${account.id}`}
+                                        state={{ from: 'all-accounts' }}
                                         className="text-sm font-bold font-body no-underline block"
                                         style={{ color: balanceColor(account.balance_cents) }}
                                     >
