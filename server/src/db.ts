@@ -59,11 +59,25 @@ try {
     // column already exists
 }
 
+try {
+    db.exec(`ALTER TABLE dashboard_config ADD COLUMN tile_type TEXT DEFAULT 'transactions'`);
+} catch {
+    // column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE dashboard_config ADD COLUMN time_window TEXT`);
+} catch {
+    // column already exists
+}
+
 db.exec(`
     CREATE TABLE IF NOT EXISTS dashboard_config (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id  INTEGER NOT NULL REFERENCES accounts(id),
-        position    INTEGER NOT NULL
+        position    INTEGER NOT NULL,
+        tile_type   TEXT NOT NULL DEFAULT 'transactions',
+        time_window TEXT
     );
 `);
 

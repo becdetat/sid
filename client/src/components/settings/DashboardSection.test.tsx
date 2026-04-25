@@ -18,9 +18,9 @@ import * as dashboardConfigApi from '../../api/dashboardConfig';
 import * as accountsApi from '../../api/accounts';
 
 const mockConfig = [
-    { id: 1, account_id: 10, position: 1 },
-    { id: 2, account_id: 20, position: 2 },
-    { id: 3, account_id: 30, position: 3 },
+    { id: 1, account_id: 10, position: 1, tile_type: 'transactions', time_window: null },
+    { id: 2, account_id: 20, position: 2, tile_type: 'transactions', time_window: null },
+    { id: 3, account_id: 30, position: 3, tile_type: 'transactions', time_window: null },
 ];
 
 const mockAccounts = [
@@ -41,104 +41,208 @@ function renderSection() {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue(mockConfig);
+    vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue(mockConfig as any);
     vi.mocked(accountsApi.listAccounts).mockResolvedValue(mockAccounts);
     vi.mocked(dashboardConfigApi.reorderDashboard).mockResolvedValue(undefined);
     vi.mocked(dashboardConfigApi.removeFromDashboard).mockResolvedValue(undefined);
-    vi.mocked(dashboardConfigApi.addToDashboard).mockResolvedValue({ id: 4, account_id: 40, position: 4 });
+    vi.mocked(dashboardConfigApi.addToDashboard).mockResolvedValue({
+        id: 4, account_id: 40, position: 4, tile_type: 'transactions', time_window: null,
+    } as any);
 });
 
 describe('DashboardSection', () => {
-    it('renders accounts in configured order', async () => {
+    it('renders tiles in configured order', async () => {
         renderSection();
-        await waitFor(() => {
-            expect(screen.getByText('Savings')).toBeTruthy();
-        });
+        await waitFor(() => screen.getAllByRole('button', { name: /move .* up/i }));
         const rows = screen.getAllByRole('row').slice(1); // skip header
         expect(rows[0].textContent).toContain('Savings');
         expect(rows[1].textContent).toContain('Checking');
         expect(rows[2].textContent).toContain('Credit Card');
     });
 
-    it('disables up button for the first account', async () => {
+    it('shows tile type suffix for chart tiles', async () => {
+        vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([
+            { id: 1, account_id: 10, position: 1, tile_type: 'balance_over_time', time_window: '30d' },
+            { id: 2, account_id: 20, position: 2, tile_type: 'totals_by_category', time_window: '3m' },
+        ] as any);
         renderSection();
-        await waitFor(() => screen.getByText('Savings'));
+        await waitFor(() => {
+            expect(screen.getByText('Savings — Balance over time')).toBeTruthy();
+        });
+        expect(screen.getByText('Checking — Totals by category')).toBeTruthy();
+    });
+
+    it('disables up button for the first tile', async () => {
+        renderSection();
+        await waitFor(() => screen.getAllByRole('button', { name: /move .* up/i }));
         const upButtons = screen.getAllByRole('button', { name: /move .* up/i });
         expect((upButtons[0] as HTMLButtonElement).disabled).toBe(true);
         expect((upButtons[1] as HTMLButtonElement).disabled).toBe(false);
     });
 
-    it('disables down button for the last account', async () => {
+    it('disables down button for the last tile', async () => {
         renderSection();
-        await waitFor(() => screen.getByText('Credit Card'));
+        await waitFor(() => screen.getAllByRole('button', { name: /move .* down/i }));
         const downButtons = screen.getAllByRole('button', { name: /move .* down/i });
         expect((downButtons[downButtons.length - 1] as HTMLButtonElement).disabled).toBe(true);
         expect((downButtons[0] as HTMLButtonElement).disabled).toBe(false);
     });
 
-    it('calls reorderDashboard with swapped ids when moving up', async () => {
+    it('calls reorderDashboard with tile ids when moving up', async () => {
         renderSection();
-        await waitFor(() => screen.getByText('Checking'));
+        await waitFor(() => screen.getAllByRole('button', { name: /move .* up/i }));
         const upButtons = screen.getAllByRole('button', { name: /move .* up/i });
         fireEvent.click(upButtons[1]); // move Checking up
         await waitFor(() => {
-            expect(dashboardConfigApi.reorderDashboard).toHaveBeenCalledWith([20, 10, 30]);
+            expect(dashboardConfigApi.reorderDashboard).toHaveBeenCalledWith([2, 1, 3]);
         });
     });
 
-    it('calls reorderDashboard with swapped ids when moving down', async () => {
+    it('calls reorderDashboard with tile ids when moving down', async () => {
         renderSection();
-        await waitFor(() => screen.getByText('Savings'));
+        await waitFor(() => screen.getAllByRole('button', { name: /move .* down/i }));
         const downButtons = screen.getAllByRole('button', { name: /move .* down/i });
         fireEvent.click(downButtons[0]); // move Savings down
         await waitFor(() => {
-            expect(dashboardConfigApi.reorderDashboard).toHaveBeenCalledWith([20, 10, 30]);
+            expect(dashboardConfigApi.reorderDashboard).toHaveBeenCalledWith([2, 1, 3]);
         });
     });
 
-    it('calls removeFromDashboard when remove button clicked', async () => {
+    it('calls removeFromDashboard with tile id when remove button clicked', async () => {
         renderSection();
-        await waitFor(() => screen.getByText('Savings'));
+        await waitFor(() => screen.getAllByRole('button', { name: /remove .* from dashboard/i }));
         const removeButtons = screen.getAllByRole('button', { name: /remove .* from dashboard/i });
         fireEvent.click(removeButtons[0]);
         await waitFor(() => {
-            expect(dashboardConfigApi.removeFromDashboard).toHaveBeenCalledWith(10);
+            expect(dashboardConfigApi.removeFromDashboard).toHaveBeenCalledWith(1);
         });
     });
 
-    it('shows only unconfigured accounts in the add dropdown', async () => {
+    it('shows all accounts in the account dropdown', async () => {
         renderSection();
-        await waitFor(() => screen.getByText('+ Add account…'));
-        const select = screen.getByRole('combobox');
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        const select = screen.getByRole('combobox', { name: /account/i });
         const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
+        expect(options).toContain('Savings');
+        expect(options).toContain('Checking');
         expect(options).toContain('Hidden Account');
-        expect(options).not.toContain('Savings');
-        expect(options).not.toContain('Checking');
-        expect(options).not.toContain('Credit Card');
     });
 
-    it('calls addToDashboard when selecting from dropdown', async () => {
+    it('does not show time window selector for Transactions tile type', async () => {
         renderSection();
-        await waitFor(() => screen.getByRole('combobox'));
-        fireEvent.change(screen.getByRole('combobox'), { target: { value: '40' } });
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'transactions' } });
+        expect(screen.queryByRole('combobox', { name: /time window/i })).toBeNull();
+    });
+
+    it('shows time window selector for Balance over time tile type', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'balance_over_time' } });
+        expect(screen.getByRole('combobox', { name: /time window/i })).toBeTruthy();
+    });
+
+    it('shows time window selector for Totals by category tile type', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'totals_by_category' } });
+        expect(screen.getByRole('combobox', { name: /time window/i })).toBeTruthy();
+    });
+
+    it('shows weeks input when Last X weeks is selected', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'balance_over_time' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /time window/i }), { target: { value: 'custom_weeks' } });
+        expect(screen.getByRole('spinbutton', { name: /number of weeks/i })).toBeTruthy();
+    });
+
+    it('disables Add tile button until form is complete for Transactions type', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        const addBtn = screen.getByRole('button', { name: /add tile/i });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'transactions' } });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('disables Add tile button for chart type until time window is selected', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        const addBtn = screen.getByRole('button', { name: /add tile/i });
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'balance_over_time' } });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.change(screen.getByRole('combobox', { name: /time window/i }), { target: { value: '30d' } });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('disables Add tile button for custom weeks until a valid count is entered', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        const addBtn = screen.getByRole('button', { name: /add tile/i });
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'balance_over_time' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /time window/i }), { target: { value: 'custom_weeks' } });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.change(screen.getByRole('spinbutton', { name: /number of weeks/i }), { target: { value: '6' } });
+        expect((addBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('calls addToDashboard with correct args for Transactions type', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '40' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'transactions' } });
+        fireEvent.click(screen.getByRole('button', { name: /add tile/i }));
         await waitFor(() => {
-            expect(dashboardConfigApi.addToDashboard).toHaveBeenCalledWith(40);
+            expect(dashboardConfigApi.addToDashboard).toHaveBeenCalledWith(40, 'transactions', undefined);
         });
     });
 
-    it('hides add dropdown when all accounts are configured', async () => {
-        vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([
-            ...mockConfig,
-            { id: 4, account_id: 40, position: 4 },
-        ]);
+    it('calls addToDashboard with preset window for chart type', async () => {
         renderSection();
-        await waitFor(() => screen.getByText('Savings'));
-        expect(screen.queryByRole('combobox')).toBeNull();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'balance_over_time' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /time window/i }), { target: { value: '3m' } });
+        fireEvent.click(screen.getByRole('button', { name: /add tile/i }));
+        await waitFor(() => {
+            expect(dashboardConfigApi.addToDashboard).toHaveBeenCalledWith(10, 'balance_over_time', '3m');
+        });
     });
 
-    it('shows empty state when no accounts are configured', async () => {
+    it('calls addToDashboard with weeks window for custom weeks', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: /account/i }), { target: { value: '10' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /tile type/i }), { target: { value: 'totals_by_category' } });
+        fireEvent.change(screen.getByRole('combobox', { name: /time window/i }), { target: { value: 'custom_weeks' } });
+        fireEvent.change(screen.getByRole('spinbutton', { name: /number of weeks/i }), { target: { value: '8' } });
+        fireEvent.click(screen.getByRole('button', { name: /add tile/i }));
+        await waitFor(() => {
+            expect(dashboardConfigApi.addToDashboard).toHaveBeenCalledWith(10, 'totals_by_category', '8w');
+        });
+    });
+
+    it('allows same account to be added multiple times', async () => {
+        renderSection();
+        await waitFor(() => screen.getByRole('combobox', { name: /account/i }));
+        // Savings (id 10) is already in mockConfig — it should still be in the dropdown
+        const select = screen.getByRole('combobox', { name: /account/i });
+        const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
+        expect(options).toContain('Savings');
+    });
+
+    it('shows empty state when no tiles are configured', async () => {
         vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([]);
         renderSection();
-        await waitFor(() => screen.getByText(/no accounts are configured/i));
+        await waitFor(() => screen.getByText(/no tiles are configured/i));
     });
 });

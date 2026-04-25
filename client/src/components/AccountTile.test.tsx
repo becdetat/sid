@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import AccountCard from './AccountCard';
+import AccountTile from './AccountTile';
 import type { DashboardAccount } from '../types/dashboard';
 
 const account: DashboardAccount = {
@@ -11,10 +11,10 @@ const account: DashboardAccount = {
     recent_transactions: [],
 };
 
-function renderCard(onAddTransaction = vi.fn()) {
+function renderTile(onAddTransaction = vi.fn()) {
     return render(
         <MemoryRouter>
-            <AccountCard
+            <AccountTile
                 account={account}
                 onAddTransaction={onAddTransaction}
             />
@@ -22,32 +22,32 @@ function renderCard(onAddTransaction = vi.fn()) {
     );
 }
 
-describe('AccountCard', () => {
+describe('AccountTile', () => {
     it('renders account name as a link', () => {
-        renderCard();
+        renderTile();
         expect(screen.getByRole('link', { name: 'Office' })).toBeTruthy();
     });
 
     it('does not show edit or delete buttons', () => {
-        renderCard();
+        renderTile();
         expect(screen.queryByRole('button', { name: /edit office/i })).toBeNull();
         expect(screen.queryByRole('button', { name: /delete office/i })).toBeNull();
     });
 
     it('shows balance colour-coded red for negative', () => {
-        renderCard();
+        renderTile();
         const el = screen.getByText('\u2212$150.00');
         expect(el.style.color).toBe('var(--red)');
     });
 
     it('shows "No transactions yet" when recent_transactions is empty', () => {
-        renderCard();
+        renderTile();
         expect(screen.getByText('No transactions yet')).toBeTruthy();
     });
 
     it('calls onAddTransaction when add transaction button is clicked', () => {
         const onAddTransaction = vi.fn();
-        renderCard(onAddTransaction);
+        renderTile(onAddTransaction);
         fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
         expect(onAddTransaction).toHaveBeenCalledWith(account);
     });

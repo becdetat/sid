@@ -42,7 +42,7 @@ router.post('/', (req, res) => {
         return;
     }
     const account = repo.create(name.trim());
-    dashboardConfig.add(account.id);
+    dashboardConfig.add(account.id, 'transactions');
     res.status(201).json(account);
 });
 
