@@ -102,6 +102,7 @@ export default function AccountDetail() {
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const importInputRef = useRef<HTMLInputElement>(null);
 
     const [keyword, setKeyword] = useState('');
@@ -283,92 +284,116 @@ export default function AccountDetail() {
             </div>
 
             {/* Filter bar */}
-            <div className="mb-5 bg-[var(--white)] rounded-2xl [border:1.5px_solid_var(--border)] p-4 shadow-[var(--shadow-sm)]">
-                <div className="flex flex-wrap gap-3 items-end">
-                    <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Search</label>
-                        <input
-                            type="text"
-                            className="sid-input"
-                            placeholder="Description or notes…"
-                            value={keyword}
-                            onChange={(e) => setKeyword(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">From</label>
-                        <input
-                            type="date"
-                            className="sid-input"
-                            value={filterFrom}
-                            onChange={(e) => setFilterFrom(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">To</label>
-                        <input
-                            type="date"
-                            className="sid-input"
-                            value={filterTo}
-                            onChange={(e) => setFilterTo(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Category</label>
-                        <select
-                            className="sid-input"
-                            value={filterCategory}
-                            onChange={(e) => setFilterCategory(e.target.value)}
-                        >
-                            <option value="">All</option>
-                            {categories.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Type</label>
-                        <select
-                            className="sid-input"
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value as 'income' | 'expense' | '')}
-                        >
-                            <option value="">All</option>
-                            <option value="income">Income</option>
-                            <option value="expense">Expense</option>
-                        </select>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Amount</label>
-                        <div className="flex items-center gap-1">
-                            <input
-                                type="number"
-                                className="sid-input w-24"
-                                placeholder="Min"
-                                min="0"
-                                value={amountMin}
-                                onChange={(e) => setAmountMin(e.target.value)}
-                            />
-                            <span className="text-[var(--text-muted)] text-sm">–</span>
-                            <input
-                                type="number"
-                                className="sid-input w-24"
-                                placeholder="Max"
-                                min="0"
-                                value={amountMax}
-                                onChange={(e) => setAmountMax(e.target.value)}
-                            />
+            <div className="mb-5 bg-[var(--white)] rounded-2xl [border:1.5px_solid_var(--border)] shadow-[var(--shadow-sm)] overflow-hidden">
+                <button
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--cream)] transition-colors"
+                    onClick={() => setFiltersOpen((o) => !o)}
+                >
+                    <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] flex items-center gap-2">
+                        Filters
+                        {isFiltered && (
+                            <span className="inline-flex items-center justify-center bg-[var(--teak)] text-white rounded-full w-4 h-4 text-[9px] font-bold">
+                                {Object.values(activeFilters).filter(Boolean).length}
+                            </span>
+                        )}
+                    </span>
+                    <svg
+                        width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
+                        className={`text-[var(--text-muted)] transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`}
+                    >
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                </button>
+
+                {filtersOpen && (
+                    <div className="px-4 pb-4 pt-1 [border-top:1px_solid_var(--border)]">
+                        <div className="flex flex-wrap gap-3 items-end pt-3">
+                            <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Search</label>
+                                <input
+                                    type="text"
+                                    className="sid-input"
+                                    placeholder="Description or notes…"
+                                    value={keyword}
+                                    onChange={(e) => setKeyword(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">From</label>
+                                <input
+                                    type="date"
+                                    className="sid-input"
+                                    value={filterFrom}
+                                    onChange={(e) => setFilterFrom(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">To</label>
+                                <input
+                                    type="date"
+                                    className="sid-input"
+                                    value={filterTo}
+                                    onChange={(e) => setFilterTo(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Category</label>
+                                <select
+                                    className="sid-input"
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                >
+                                    <option value="">All</option>
+                                    {categories.map((c) => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Type</label>
+                                <select
+                                    className="sid-input"
+                                    value={filterType}
+                                    onChange={(e) => setFilterType(e.target.value as 'income' | 'expense' | '')}
+                                >
+                                    <option value="">All</option>
+                                    <option value="income">Income</option>
+                                    <option value="expense">Expense</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Amount</label>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number"
+                                        className="sid-input w-24"
+                                        placeholder="Min"
+                                        min="0"
+                                        value={amountMin}
+                                        onChange={(e) => setAmountMin(e.target.value)}
+                                    />
+                                    <span className="text-[var(--text-muted)] text-sm">–</span>
+                                    <input
+                                        type="number"
+                                        className="sid-input w-24"
+                                        placeholder="Max"
+                                        min="0"
+                                        value={amountMax}
+                                        onChange={(e) => setAmountMax(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            {isFiltered && (
+                                <button
+                                    className="sid-btn sid-btn-ghost sid-btn-sm self-end"
+                                    onClick={clearFilters}
+                                >
+                                    Clear filters
+                                </button>
+                            )}
                         </div>
                     </div>
-                    {isFiltered && (
-                        <button
-                            className="sid-btn sid-btn-ghost sid-btn-sm self-end"
-                            onClick={clearFilters}
-                        >
-                            Clear filters
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
 
             {txLoading && (
