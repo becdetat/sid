@@ -147,3 +147,6 @@ docker/.env
 __tests__
 *.db-shm
 *.db-wal
+.obsidian
+wiki/implementation/microsite/_images/.DS_Store
+.DS_Store

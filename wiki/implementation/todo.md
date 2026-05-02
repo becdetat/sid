@@ -8,4 +8,4 @@
 - [ ] Show duration for charts (e.g. "Showing last 3 months")
 - [ ] Income vs. expense by month (grouped bar chart)
 - [ ] Move dashboard configuration into dashboard itself - remove Settings -> Dashboard
-- [ ] 
+- [ ] Make description optional, use category as fallback for display if it is set

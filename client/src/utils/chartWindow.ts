@@ -1,0 +1,14 @@
+export function formatChartWindow(window: string): string {
+    if (window === '30d') return 'Last 30 days';
+    if (window === '3m') return 'Last 3 months';
+    if (window === '12m') return 'Last 12 months';
+    if (window === 'all') return 'All time';
+
+    const weeksMatch = window.match(/^(\d+)w$/);
+    if (weeksMatch) {
+        const weeks = parseInt(weeksMatch[1], 10);
+        return `Last ${weeks} week${weeks === 1 ? '' : 's'}`;
+    }
+
+    return window;
+}

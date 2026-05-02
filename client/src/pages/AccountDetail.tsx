@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -27,6 +28,10 @@ type Modal =
     | { type: 'edit'; transaction: Transaction }
     | { type: 'delete'; transaction: Transaction }
     | null;
+
+interface AccountDetailLocationState {
+    from?: 'all-accounts';
+}
 
 function ActionsDropdown({
     onDownloadTemplate,
@@ -98,7 +103,8 @@ export default function AccountDetail() {
     const { id } = useParams<{ id: string }>();
     const accountId = parseInt(id!, 10);
     const location = useLocation();
-    const fromAllAccounts = (location.state as any)?.from === 'all-accounts';
+    const locationState = location.state as AccountDetailLocationState | null;
+    const fromAllAccounts = locationState?.from === 'all-accounts';
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [isImporting, setIsImporting] = useState(false);
@@ -238,8 +244,10 @@ export default function AccountDetail() {
             const { imported } = await importTransactions(accountId, file);
             queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
             toast.success(`${imported} ${imported === 1 ? 'transaction' : 'transactions'} imported.`);
-        } catch (err: any) {
-            const message = err?.response?.data?.error ?? 'Failed to import transactions.';
+        } catch (err: unknown) {
+            const message = axios.isAxiosError<{ error?: string }>(err)
+                ? err.response?.data?.error ?? 'Failed to import transactions.'
+                : 'Failed to import transactions.';
             toast.error(message);
         } finally {
             setIsImporting(false);

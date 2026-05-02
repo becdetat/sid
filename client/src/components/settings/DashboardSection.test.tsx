@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardSection from './DashboardSection';
+import type { DashboardConfigItem } from '../../api/dashboardConfig';
+import type { Account } from '../../types/account';
 
 vi.mock('../../api/dashboardConfig', () => ({
     getDashboardConfig: vi.fn(),
@@ -17,13 +19,13 @@ vi.mock('../../api/accounts', () => ({
 import * as dashboardConfigApi from '../../api/dashboardConfig';
 import * as accountsApi from '../../api/accounts';
 
-const mockConfig = [
+const mockConfig: DashboardConfigItem[] = [
     { id: 1, account_id: 10, position: 1, tile_type: 'transactions', time_window: null },
     { id: 2, account_id: 20, position: 2, tile_type: 'transactions', time_window: null },
     { id: 3, account_id: 30, position: 3, tile_type: 'transactions', time_window: null },
 ];
 
-const mockAccounts = [
+const mockAccounts: Account[] = [
     { id: 10, name: 'Savings', created_at: '', deleted_at: null, transaction_count: 0 },
     { id: 20, name: 'Checking', created_at: '', deleted_at: null, transaction_count: 0 },
     { id: 30, name: 'Credit Card', created_at: '', deleted_at: null, transaction_count: 0 },
@@ -41,13 +43,13 @@ function renderSection() {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue(mockConfig as any);
+    vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue(mockConfig);
     vi.mocked(accountsApi.listAccounts).mockResolvedValue(mockAccounts);
     vi.mocked(dashboardConfigApi.reorderDashboard).mockResolvedValue(undefined);
     vi.mocked(dashboardConfigApi.removeFromDashboard).mockResolvedValue(undefined);
     vi.mocked(dashboardConfigApi.addToDashboard).mockResolvedValue({
         id: 4, account_id: 40, position: 4, tile_type: 'transactions', time_window: null,
-    } as any);
+    });
 });
 
 describe('DashboardSection', () => {
@@ -64,7 +66,7 @@ describe('DashboardSection', () => {
         vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([
             { id: 1, account_id: 10, position: 1, tile_type: 'balance_over_time', time_window: '30d' },
             { id: 2, account_id: 20, position: 2, tile_type: 'totals_by_category', time_window: '3m' },
-        ] as any);
+        ]);
         renderSection();
         await waitFor(() => {
             expect(screen.getByText('Savings — Balance over time')).toBeTruthy();

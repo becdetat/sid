@@ -7,6 +7,7 @@ import {
     Tooltip,
     ResponsiveContainer,
     Cell,
+    type TooltipContentProps,
 } from 'recharts';
 import { getCategoryChart } from '../api/charts';
 import { formatCents } from '../utils/format';
@@ -24,12 +25,14 @@ function formatXAxis(value: number): string {
     return `$${abs.toFixed(0)}`;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
+function CustomTooltip({ active, payload, label }: TooltipContentProps) {
+    const value = payload?.[0]?.value;
+    if (!active || !payload?.length || typeof label !== 'string' || typeof value !== 'number') return null;
+
     return (
         <div className="bg-[var(--white)] [border:1.5px_solid_var(--border)] rounded-lg px-3 py-2 shadow-[var(--shadow-md)] text-xs font-body">
             <p className="text-[var(--text-muted)] mb-0.5">{label}</p>
-            <p className="font-semibold text-[var(--text-primary)]">{formatCents(payload[0].value)}</p>
+            <p className="font-semibold text-[var(--text-primary)]">{formatCents(value)}</p>
         </div>
     );
 }
@@ -81,7 +84,7 @@ export default function CategoryChartTile({ accountId, accountName, window }: Pr
                                 axisLine={false}
                                 width={90}
                             />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--cream)' }} />
+                            <Tooltip content={(props) => <CustomTooltip {...props} />} cursor={{ fill: 'var(--cream)' }} />
                             <Bar dataKey="total_cents" radius={[0, 3, 3, 0]}>
                                 {data.map((_, i) => (
                                     <Cell key={i} fill="var(--teak)" fillOpacity={1 - i * 0.07} />

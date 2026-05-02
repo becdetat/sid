@@ -6,8 +6,10 @@ import {
     YAxis,
     Tooltip,
     ResponsiveContainer,
+    type TooltipContentProps,
 } from 'recharts';
 import { getBalanceChart } from '../api/charts';
+import { formatChartWindow } from '../utils/chartWindow';
 import { formatCents, formatDate } from '../utils/format';
 import { Tile } from './Tile';
 
@@ -23,12 +25,14 @@ function formatYAxis(value: number): string {
     return `$${abs.toFixed(0)}`;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
+function CustomTooltip({ active, payload, label }: TooltipContentProps) {
+    const value = payload?.[0]?.value;
+    if (!active || !payload?.length || typeof label !== 'string' || typeof value !== 'number') return null;
+
     return (
         <div className="bg-[var(--white)] [border:1.5px_solid_var(--border)] rounded-lg px-3 py-2 shadow-[var(--shadow-md)] text-xs font-body">
-            <p className="text-[var(--text-muted)] mb-0.5">{label ? formatDate(label) : ''}</p>
-            <p className="font-semibold text-[var(--text-primary)]">{formatCents(payload[0].value)}</p>
+            <p className="text-[var(--text-muted)] mb-0.5">{formatDate(label)}</p>
+            <p className="font-semibold text-[var(--text-primary)]">{formatCents(value)}</p>
         </div>
     );
 }
@@ -38,9 +42,14 @@ export default function BalanceChartTile({ accountId, accountName, window }: Pro
         queryKey: ['chart-balance', accountId, window],
         queryFn: () => getBalanceChart(accountId, window),
     });
+    const windowLabel = formatChartWindow(window);
 
     return (
         <Tile accountName={accountName} accountId={accountId}>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)] font-body">
+                {windowLabel}
+            </p>
+
             {isLoading && (
                 <div className="flex-1 flex items-center justify-center min-h-[140px]">
                     <p className="text-xs text-[var(--text-muted)] italic">Loading…</p>
@@ -75,7 +84,7 @@ export default function BalanceChartTile({ accountId, accountName, window }: Pro
                                 axisLine={false}
                                 width={48}
                             />
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip content={(props) => <CustomTooltip {...props} />} />
                             <Line
                                 type="monotone"
                                 dataKey="balance_cents"
