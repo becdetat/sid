@@ -33,7 +33,16 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/becdetat/sid
+          images: ghcr.io/tanby-dynamics/sid
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+
+      - name: Extract metadata (microsite)
+        id: meta_microsite
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/tanby-dynamics/sid-microsite
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
@@ -48,6 +57,16 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ github.ref_name }}
+
+      - name: Build and push microsite
+        uses: docker/build-push-action@v6
+        with:
+          context: ./microsite
+          file: ./microsite/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_microsite.outputs.tags }}
+          labels: ${{ steps.meta_microsite.outputs.labels }}
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

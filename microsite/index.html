@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sid - Self-hosted expense tracker</title>
+  <meta name="description" content="Sid is an extremely basic, self-hosted expense tracker. Run it yourself with Docker in minutes." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --page: #faf5e8;
+      --surface: #fffef9;
+      --rim: #e5d9c0;
+      --brown-500: #8b6340;
+      --brown-600: #7a5230;
+      --brown-700: #6a4220;
+      --brown-900: #4e3218;
+      --gold-300: #eecb50;
+      --gold-400: #e8b93a;
+      --serif: Georgia, 'Times New Roman', serif;
+      --sans: 'Nunito', sans-serif;
+    }
+    body {
+      background: var(--page);
+      color: var(--brown-900);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wood-header {
+      height: 6px;
+      background: linear-gradient(90deg, #7a5230 0%, #8b6340 15%, #6a4220 30%, #a87550 45%, #7a5230 60%, #6a4220 75%, #8b6340 90%, #7a5230 100%);
+    }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--rim);
+      padding: 0 clamp(1.5rem, 5vw, 4rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--brown-900);
+    }
+    .nav-logo img { height: 22px; width: auto; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--brown-600);
+      text-decoration: none;
+    }
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--brown-600);
+      color: var(--surface) !important;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+    }
+    .hero {
+      padding: clamp(4rem, 10vw, 7rem) clamp(1.5rem, 5vw, 4rem) clamp(3rem, 6vw, 5rem);
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem 4rem;
+      align-items: center;
+    }
+    @media (max-width: 780px) { .hero { grid-template-columns: 1fr; } }
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--brown-500);
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(2.4rem, 5vw, 3.5rem);
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+      margin-bottom: 1.25rem;
+    }
+    h1 em { font-style: normal; color: var(--brown-600); }
+    .hero-desc { font-size: 1.05rem; color: var(--brown-500); margin-bottom: 2rem; max-width: 42ch; }
+    .hero-cta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-primary, .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 0.65rem 1.4rem;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--brown-600); color: var(--surface); }
+    .btn-secondary { border: 1.5px solid var(--rim); color: var(--brown-700); }
+    .hero-visuals {
+      position: relative;
+      height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (max-width: 780px) { .hero-visuals { height: 300px; } }
+    .shot {
+      position: absolute;
+      border-radius: 14px;
+      box-shadow: 0 8px 40px rgba(78, 50, 24, 0.18), 0 2px 8px rgba(78, 50, 24, 0.10);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .shot-dashboard { width: 340px; height: 220px; top: 20px; right: 0; z-index: 2; }
+    .shot-form { width: 200px; height: 310px; bottom: 10px; left: 20px; z-index: 3; transform: rotate(-2deg); }
+    @media (max-width: 780px) {
+      .shot-dashboard { width: 260px; height: 168px; top: 10px; right: 0; }
+      .shot-form { width: 150px; height: 230px; bottom: 5px; left: 10px; }
+    }
+    .gold-stripe {
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold-400) 20%, var(--gold-300) 50%, var(--gold-400) 80%, transparent);
+    }
+    .features {
+      padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 700px) { .features-grid { grid-template-columns: 1fr; } }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      border-radius: 14px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold-400), var(--gold-300));
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      margin-bottom: 0.9rem;
+      color: var(--brown-600);
+    }
+    .feature-card h3 {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--brown-900);
+      margin-bottom: 0.4rem;
+    }
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--brown-500);
+      line-height: 1.6;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Courier New', monospace;
+      background: #f5e8d8;
+      color: var(--brown-700);
+      font-size: 0.83em;
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+    .screenshots {
+      background: var(--surface);
+      border-top: 1px solid var(--rim);
+      border-bottom: 1px solid var(--rim);
+      padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+    }
+    .screenshots-inner { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brown-500);
+      margin-bottom: 0.6rem;
+    }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(1.6rem, 3vw, 2.25rem);
+      margin-bottom: 2rem;
+      letter-spacing: -0.02em;
+    }
+    .shots-row {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    .shot-card {
+      background: var(--page);
+      border: 1px solid var(--rim);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(78, 50, 24, 0.10);
+    }
+    .shot-card img { display: block; max-width: 100%; height: auto; }
+    .shot-card-label {
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--brown-500);
+      border-top: 1px solid var(--rim);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+    .setup {
+      padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 700px) { .setup-grid { grid-template-columns: 1fr; } }
+    .setup-step {
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+    .setup-step h3 {
+      font-family: var(--serif);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--brown-900);
+      margin-bottom: 0.75rem;
+    }
+    .setup-step p {
+      font-size: 0.875rem;
+      color: var(--brown-500);
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--gold-400);
+      color: var(--brown-900);
+      font-size: 0.8rem;
+      font-weight: 800;
+      border-radius: 50%;
+      margin-bottom: 0.75rem;
+    }
+    pre {
+      background: var(--brown-900);
+      color: #f5e8d8;
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      font-size: 0.8rem;
+      line-height: 1.65;
+      overflow-x: auto;
+      font-family: Menlo, Monaco, 'Courier New', monospace;
+      margin-top: 0.5rem;
+    }
+    pre .comment { color: #8b7560; }
+    pre .key { color: var(--gold-400); }
+    pre .val { color: #a3d9a5; }
+    pre .cmd { color: #f5e8d8; }
+    pre .dollar { color: #8b7560; user-select: none; }
+    .support {
+      background: var(--surface);
+      border-top: 1px solid var(--rim);
+      padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+    }
+    .support-inner {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .support-inner p {
+      font-size: 1rem;
+      color: var(--brown-500);
+      margin-bottom: 1.5rem;
+      line-height: 1.7;
+    }
+    footer {
+      border-top: 1px solid var(--rim);
+      padding: 2rem clamp(1.5rem, 5vw, 4rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 0.5rem; }
+    .footer-brand img { height: 18px; width: auto; }
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.85rem;
+      color: var(--brown-500);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--brown-700); }
+    .footer-copy { width: 100%; font-size: 0.8rem; color: #a87550; }
+  </style>
+</head>
+<body>
+  <div class="wood-header"></div>
+
+  <nav>
+    <a class="nav-logo" href="#" aria-label="Sid home"><img src="./logo.svg" alt="Sid" /></a>
+    <ul class="nav-links">
+      <li><a href="#screenshots">Screenshots</a></li>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#support">Support</a></li>
+      <li>
+        <a href="https://github.com/tanby-dynamics/sid" target="_blank" rel="noopener" class="btn-nav">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-text">
+      <span class="hero-eyebrow">Open source · Self-hosted · Docker</span>
+      <h1>Track expenses.<br /><em>Own your data.</em></h1>
+      <p class="hero-desc">Sid is an extremely basic, no-fuss expense tracker you run yourself. No subscriptions, no cloud, no lock-in - just a Docker container and a SQLite database you control.</p>
+      <div class="hero-cta">
+        <a href="#setup" class="btn-primary">Get started</a>
+        <a href="https://github.com/tanby-dynamics/sid" target="_blank" rel="noopener" class="btn-secondary">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-visuals" aria-hidden="true">
+      <div class="shot shot-dashboard"><img src="./screenshots/dashboard.png" alt="Sid dashboard" loading="eager" /></div>
+      <div class="shot shot-form"><img src="./screenshots/new-transaction.png" alt="New transaction form" loading="eager" /></div>
+    </div>
+  </section>
+
+  <div class="gold-stripe"></div>
+
+  <section class="features">
+    <div class="section-label">Why Sid</div>
+    <h2 class="section-title">Simple by design</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <h3>Self-hosted</h3>
+        <p>Your financial data stays on your hardware. No third party ever sees it.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <h3>Docker-native</h3>
+        <p>One <code>docker compose up</code> and you are running. Restarts automatically.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+        <h3>SQLite storage</h3>
+        <p>A single <code>.db</code> file. Back it up with any tool you like.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <h3>Open source</h3>
+        <p><code>MIT</code>-licensed. Read the code, fork it, and send a PR.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <h3>Income and expenses</h3>
+        <p>Track both sides, categorize transactions, and attach notes.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <h3>Balance charts</h3>
+        <p>See account trends at a glance with configurable windows.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screenshots" id="screenshots">
+    <div class="screenshots-inner">
+      <div class="section-label">Screenshots</div>
+      <h2 class="section-title">Clean, warm interface</h2>
+      <div class="shots-row">
+        <div class="shot-card">
+          <img src="./screenshots/dashboard.png" alt="Dashboard view showing account balance and transaction history" width="520" />
+          <div class="shot-card-label">Dashboard</div>
+        </div>
+        <div class="shot-card">
+          <img src="./screenshots/new-transaction.png" alt="New transaction form" width="280" />
+          <div class="shot-card-label">Add transaction</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="setup" id="setup">
+    <div class="section-label">Self-hosting</div>
+    <h2 class="section-title">Up in three steps</h2>
+    <div class="setup-grid">
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <h3>Create your <code>docker-compose.yml</code></h3>
+        <p>Copy this into a new directory on your server:</p>
+        <pre><span class="key">services</span><span class="cmd">:
+  </span><span class="key">sid</span><span class="cmd">:
+    </span><span class="key">image</span><span class="cmd">: </span><span class="val">ghcr.io/tanby-dynamics/sid:latest</span><span class="cmd">
+    </span><span class="key">ports</span><span class="cmd">:
+      - </span><span class="val">"3000:3000"</span><span class="cmd">
+    </span><span class="key">volumes</span><span class="cmd">:
+      - </span><span class="val">./data:/data</span><span class="cmd">
+    </span><span class="key">env_file</span><span class="cmd">:
+      - </span><span class="val">.env</span><span class="cmd">
+    </span><span class="key">restart</span><span class="cmd">: </span><span class="val">unless-stopped</span></pre>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <h3>Create <code>.env</code></h3>
+        <p>Configure your environment - adjust <code>CORS_ORIGIN</code> to match your domain:</p>
+        <pre><span class="comment"># SQLite path inside the container</span>
+<span class="key">DATABASE_PATH</span><span class="cmd">=</span><span class="val">/data/sid.db</span>
+
+<span class="comment"># Restrict to your origin, or use * for open</span>
+<span class="key">CORS_ORIGIN</span><span class="cmd">=</span><span class="val">https://sid.example.com</span></pre>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <h3>Start the container</h3>
+        <p>Create the data directory and bring the stack up:</p>
+        <pre><span class="dollar">$ </span><span class="cmd">mkdir data
+</span><span class="dollar">$ </span><span class="cmd">docker compose up -d</span></pre>
+        <p style="margin-top:0.75rem">Sid will be available at <code>http://localhost:3000</code>.</p>
+      </div>
+      <div class="setup-step">
+        <div class="step-num" style="background: var(--brown-200, #e0c4a0);">↓</div>
+        <h3>Updates</h3>
+        <p>Pull the latest image and restart:</p>
+        <pre><span class="dollar">$ </span><span class="cmd">docker compose pull
+</span><span class="dollar">$ </span><span class="cmd">docker compose up -d</span></pre>
+        <p style="margin-top:0.75rem">Images are published for <code>linux/amd64</code> and <code>linux/arm64</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="gold-stripe"></div>
+
+  <section class="support" id="support">
+    <div class="support-inner">
+      <div class="section-label">Support</div>
+      <h2 class="section-title" style="text-align:center">Need help?</h2>
+      <p>Found a bug or have a feature request? Open an issue on GitHub. Sid is a personal project - responses may take a little while, but all issues are read.</p>
+      <a href="https://github.com/tanby-dynamics/sid/issues" target="_blank" rel="noopener" class="btn-primary" style="display:inline-flex">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="flex-shrink:0"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Raise an issue on GitHub
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-brand"><img src="./logo.svg" alt="Sid" /></div>
+    <ul class="footer-links">
+      <li><a href="https://github.com/tanby-dynamics/sid" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://tanbydynamics.co" target="_blank" rel="noopener">Tanby Dynamics</a></li>
+      <li><a href="https://becdetat.com" target="_blank" rel="noopener">becdetat.com</a></li>
+    </ul>
+    <p class="footer-copy">An open source project by becdetat · Tanby Dynamics</p>
+  </footer>
+</body>
+</html>

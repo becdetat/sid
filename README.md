@@ -52,7 +52,7 @@ Create `docker-compose.yml` (or copy it from `/docker-compose-example/docker-com
 ```yml
 services:
   sid:
-    image: ghcr.io/becdetat/sid:latest
+    image: ghcr.io/tanby-dynamics/sid:latest
     ports:
       - "3000:3000"
     volumes:

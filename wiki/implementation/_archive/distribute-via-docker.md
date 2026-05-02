@@ -57,7 +57,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 ```yaml
 services:
   sid:
-    image: ghcr.io/becdetat/sid:latest
+    image: ghcr.io/tanby-dynamics/sid:latest
     ports:
       - "3000:3000"
     volumes:
@@ -89,8 +89,8 @@ The `docker/.env` file (user-created from the example) is gitignored.
 - **Platforms:** `linux/amd64`, `linux/arm64`
 - **Registry:** `ghcr.io`, authenticated via `GITHUB_TOKEN`
 - **Image tags:**
-  - `ghcr.io/becdetat/sid:latest`
-  - `ghcr.io/becdetat/sid:<git-tag>` (e.g. `v1.2.0`)
+  - `ghcr.io/tanby-dynamics/sid:latest`
+  - `ghcr.io/tanby-dynamics/sid:<git-tag>` (e.g. `v1.2.0`)
 - **Steps:** checkout → QEMU setup → Buildx setup → GHCR login → extract metadata → build and push
 
 ### README additions
@@ -149,8 +149,8 @@ A "Releasing a new version" section documents the tag-and-push flow. A "Self-hos
 ### GH Actions publish
 
 11. Push a tag: `git tag v0.0.1-test && git push origin v0.0.1-test`
-12. Check the Actions tab — workflow should trigger, complete successfully, and publish `ghcr.io/becdetat/sid:v0.0.1-test` and `ghcr.io/becdetat/sid:latest` to GHCR
-13. Pull and run the published image: `docker pull ghcr.io/becdetat/sid:v0.0.1-test`
+12. Check the Actions tab — workflow should trigger, complete successfully, and publish `ghcr.io/tanby-dynamics/sid:v0.0.1-test` and `ghcr.io/tanby-dynamics/sid:latest` to GHCR
+13. Pull and run the published image: `docker pull ghcr.io/tanby-dynamics/sid:v0.0.1-test`
 
 ---
 
