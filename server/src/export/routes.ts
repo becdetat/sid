@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { findById } from '../accounts/repository';
-import { findByAccount } from '../transactions/repository';
+import { findByAccount, findByIds } from '../transactions/repository';
 import type { TransactionFilters } from '../transactions/repository';
 import { toCSV } from './csv';
 
@@ -34,6 +34,40 @@ router.get('/', (req, res) => {
         amount_cents: t.amount_cents,
         notes: t.notes,
     })).reverse();
+
+    const csv = toCSV(rows);
+    const safeName = account.name.replace(/[^a-zA-Z0-9\-_]/g, '_');
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = `${safeName}-${today}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+});
+
+router.post('/bulk', (req, res) => {
+    const accountId = parseInt((req.params as any).id, 10);
+    const account = findById(accountId);
+    if (!account) return void res.status(404).json({ error: 'account not found' });
+
+    const { ids } = req.body as { ids?: unknown };
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === 'number')) {
+        return void res.status(400).json({ error: 'ids must be a non-empty array of numbers' });
+    }
+
+    const transactions = findByIds(ids as number[], accountId);
+    if (transactions.length !== ids.length) {
+        return void res.status(400).json({ error: 'one or more transactions not found or do not belong to this account' });
+    }
+
+    const rows = [...transactions].reverse().map((t) => ({
+        date: t.date,
+        category: t.category,
+        description: t.description,
+        type: t.type,
+        amount_cents: t.amount_cents,
+        notes: t.notes,
+    }));
 
     const csv = toCSV(rows);
     const safeName = account.name.replace(/[^a-zA-Z0-9\-_]/g, '_');

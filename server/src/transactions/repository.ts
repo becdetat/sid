@@ -156,6 +156,38 @@ export function softDelete(id: number): boolean {
     return run(id) as boolean;
 }
 
+export function bulkSoftDelete(ids: number[], accountId: number): boolean {
+    if (ids.length === 0) return false;
+
+    const placeholders = ids.map(() => '?').join(',');
+    const owned = db
+        .prepare(`SELECT COUNT(*) as cnt FROM transactions WHERE id IN (${placeholders}) AND account_id = ? AND deleted_at IS NULL`)
+        .get(...ids, accountId) as { cnt: number };
+    if (owned.cnt !== ids.length) return false;
+
+    const deleteAttachments = db.prepare(
+        `UPDATE attachments SET deleted_at = datetime('now') WHERE transaction_id IN (${placeholders}) AND deleted_at IS NULL`,
+    );
+    const deleteTransactions = db.prepare(
+        `UPDATE transactions SET deleted_at = datetime('now') WHERE id IN (${placeholders}) AND account_id = ? AND deleted_at IS NULL`,
+    );
+
+    db.transaction(() => {
+        deleteAttachments.run(...ids);
+        deleteTransactions.run(...ids, accountId);
+    })();
+
+    return true;
+}
+
+export function findByIds(ids: number[], accountId: number): Transaction[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    return db
+        .prepare(`SELECT * FROM transactions WHERE id IN (${placeholders}) AND account_id = ? AND deleted_at IS NULL ORDER BY date DESC, id DESC`)
+        .all(...ids, accountId) as Transaction[];
+}
+
 export function getBalance(accountId: number): number {
     const row = db
         .prepare(

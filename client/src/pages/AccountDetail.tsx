@@ -9,6 +9,8 @@ import {
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    bulkDeleteTransactions,
+    bulkExportTransactions,
     importTransactions,
     type TransactionPayload,
     type TransactionFilters,
@@ -17,6 +19,7 @@ import { getCategories } from '../api/categories';
 import { downloadImportTemplate } from '../utils/importTemplate';
 import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
+import BulkActionBar from '../components/BulkActionBar';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import type { Transaction } from '../types/transaction';
@@ -27,6 +30,7 @@ type Modal =
     | { type: 'create' }
     | { type: 'edit'; transaction: Transaction }
     | { type: 'delete'; transaction: Transaction }
+    | { type: 'bulk-delete' }
     | null;
 
 interface AccountDetailLocationState {
@@ -97,7 +101,7 @@ function ActionsDropdown({
     );
 }
 
-const TX_GRID = '130px 120px 1fr 90px 120px 72px';
+const TX_GRID = '32px 130px 120px 1fr 90px 120px 72px';
 
 export default function AccountDetail() {
     const { id } = useParams<{ id: string }>();
@@ -119,6 +123,9 @@ export default function AccountDetail() {
     const [filterType, setFilterType] = useState<'income' | 'expense' | ''>('');
     const [amountMin, setAmountMin] = useState('');
     const [amountMax, setAmountMax] = useState('');
+
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const selectAllRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedKeyword(keyword), 300);
@@ -164,6 +171,45 @@ export default function AccountDetail() {
 
     const balance = transactions.reduce((sum, t) => sum + t.amount_cents, 0);
 
+    const visibleIds = new Set(transactions.map((t) => t.id));
+    useEffect(() => {
+        setSelectedIds((prev) => {
+            const next = new Set([...prev].filter((id) => visibleIds.has(id)));
+            return next.size === prev.size ? prev : next;
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [transactions]);
+
+    const allSelected = selectedIds.size === transactions.length && transactions.length > 0;
+    const someSelected = selectedIds.size > 0 && !allSelected;
+
+    useEffect(() => {
+        if (selectAllRef.current) {
+            selectAllRef.current.indeterminate = someSelected;
+        }
+    }, [someSelected]);
+
+    function handleSelectRow(id: number) {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }
+
+    function handleSelectAll() {
+        if (allSelected) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(transactions.map((t) => t.id)));
+        }
+    }
+
+    function handleClearSelection() {
+        setSelectedIds(new Set());
+    }
+
     const createMutation = useMutation({
         mutationFn: (data: TransactionPayload) => createTransaction(accountId, data),
         onError: () => toast.error('Failed to add transaction.'),
@@ -183,6 +229,17 @@ export default function AccountDetail() {
             toast.success('Transaction deleted.');
         },
         onError: () => toast.error('Failed to delete transaction.'),
+    });
+
+    const bulkDeleteMutation = useMutation({
+        mutationFn: (ids: number[]) => bulkDeleteTransactions(accountId, ids),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            setSelectedIds(new Set());
+            setModal(null);
+            toast.success('Transactions deleted.');
+        },
+        onError: () => toast.error('Failed to delete transactions.'),
     });
 
     async function handleCreate(data: TransactionPayload, pendingFiles: File[]) {
@@ -233,6 +290,15 @@ export default function AccountDetail() {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    }
+
+    async function handleBulkExport() {
+        try {
+            await bulkExportTransactions(accountId, [...selectedIds]);
+            setSelectedIds(new Set());
+        } catch {
+            toast.error('Failed to export transactions.');
+        }
     }
 
     async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -404,6 +470,13 @@ export default function AccountDetail() {
                 )}
             </div>
 
+            <BulkActionBar
+                selectedCount={selectedIds.size}
+                onDelete={() => setModal({ type: 'bulk-delete' })}
+                onExport={handleBulkExport}
+                onClear={handleClearSelection}
+            />
+
             {txLoading && (
                 <p className="text-sm text-[var(--text-muted)]">Loading…</p>
             )}
@@ -435,6 +508,14 @@ export default function AccountDetail() {
                         className="hidden sm:grid px-5 py-[10px] bg-[var(--cream)] [border-bottom:1.5px_solid_var(--border)]"
                         style={{ gridTemplateColumns: TX_GRID }}
                     >
+                        <input
+                            ref={selectAllRef}
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={handleSelectAll}
+                            aria-label="Select all transactions"
+                            className="w-4 h-4 cursor-pointer accent-[var(--teak)] self-center"
+                        />
                         {['Date', 'Category', 'Description', 'Type', 'Amount', ''].map((h, i) => (
                             <div key={i} className={`text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] ${i === 4 ? 'text-right' : 'text-left'}`}>
                                 {h}
@@ -450,6 +531,8 @@ export default function AccountDetail() {
                             gridTemplate={TX_GRID}
                             onEdit={(tx) => setModal({ type: 'edit', transaction: tx })}
                             onDelete={(tx) => setModal({ type: 'delete', transaction: tx })}
+                            isSelected={selectedIds.has(t.id)}
+                            onSelect={handleSelectRow}
                         />
                     ))}
                 </div>
@@ -472,6 +555,13 @@ export default function AccountDetail() {
                 <ConfirmDialog
                     message={`Delete "${modal.transaction.description}"? This will also delete any attachments.`}
                     onConfirm={() => deleteMutation.mutate(modal.transaction.id)}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'bulk-delete' && (
+                <ConfirmDialog
+                    message={`Delete ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}? This will also delete any attachments.`}
+                    onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
                     onCancel={() => setModal(null)}
                 />
             )}

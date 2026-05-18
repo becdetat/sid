@@ -67,6 +67,25 @@ export async function deleteTransaction(accountId: number, id: number): Promise<
     await axios.delete(`${base(accountId)}/${id}`);
 }
 
+export async function bulkDeleteTransactions(accountId: number, ids: number[]): Promise<void> {
+    await axios.delete(`${base(accountId)}/bulk`, { data: { ids } });
+}
+
+export async function bulkExportTransactions(accountId: number, ids: number[]): Promise<void> {
+    const response = await axios.post(`/api/accounts/${accountId}/export/bulk`, { ids }, { responseType: 'blob' });
+    const disposition = response.headers['content-disposition'] as string | undefined;
+    const match = disposition?.match(/filename="([^"]+)"/);
+    const filename = match?.[1] ?? `export-${new Date().toISOString().slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(new Blob([response.data as BlobPart], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 export async function importTransactions(
     accountId: number,
     file: File,

@@ -6,6 +6,9 @@
 - [x] Make filters a collapsible section, collapsed by default
 - [x] Navigating to an account from "All accounts", the link "Back to dashboard" should be replaced by "Back to all accounts"
 - [x] Show duration for charts (e.g. "Showing last 3 months")
-- [ ] Income vs. expense by month (grouped bar chart)
+- [x] Income vs. expense tile by month (grouped bar chart)
 - [ ] Move dashboard configuration into dashboard itself - remove Settings -> Dashboard
-- [ ] Make description optional, use category as fallback for display if it is set
+- [x] Bulk transaction operations
+- [ ] Budget limits per category
+- [ ] Recurring transactions
+- [ ] [Make description optional, make category required and use category as fallback for display](https://github.com/tanby-dynamics/sid/issues/28)

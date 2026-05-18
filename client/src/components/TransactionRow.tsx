@@ -11,6 +11,8 @@ interface Props {
     gridTemplate: string;
     onEdit: (t: Transaction) => void;
     onDelete: (t: Transaction) => void;
+    isSelected?: boolean;
+    onSelect?: (id: number) => void;
 }
 
 const EditIcon = () => (
@@ -30,7 +32,7 @@ function formatBytes(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete }: Props) {
+export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete, isSelected = false, onSelect }: Props) {
     const [expanded, setExpanded] = useState(false);
     const isIncome = transaction.type === 'income';
 
@@ -47,7 +49,7 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
     );
 
     return (
-        <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--cream-mid)' }}>
+        <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--cream-mid)', background: isSelected ? 'var(--cream)' : undefined }}>
             {/* Clickable row */}
             <div
                 className="group cursor-pointer hover:bg-[var(--cream)] transition-colors duration-[120ms]"
@@ -101,6 +103,16 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                     className="hidden sm:grid items-center px-5 py-[13px]"
                     style={{ gridTemplateColumns: gridTemplate }}
                 >
+                    {onSelect && (
+                        <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => { e.stopPropagation(); onSelect(transaction.id); }}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Select ${transaction.description}`}
+                            className="w-4 h-4 cursor-pointer accent-[var(--teak)]"
+                        />
+                    )}
                     <span className="text-[13px] text-[var(--text-muted)]">{formatDate(transaction.date)}</span>
                     <span className="text-xs text-[var(--text-muted)]">{transaction.category ?? ''}</span>
                     <span className="text-[13px] text-[var(--text-primary)] font-semibold">{transaction.description}</span>

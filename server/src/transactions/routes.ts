@@ -137,6 +137,27 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
     res.json(updated);
 });
 
+router.delete<{ accountId: string }>('/bulk', (req, res) => {
+    const accountId = parseInt(req.params.accountId, 10);
+    if (!findAccount(accountId)) {
+        res.status(404).json({ error: 'account not found' });
+        return;
+    }
+
+    const { ids } = req.body as { ids?: unknown };
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === 'number')) {
+        res.status(400).json({ error: 'ids must be a non-empty array of numbers' });
+        return;
+    }
+
+    const ok = repo.bulkSoftDelete(ids as number[], accountId);
+    if (!ok) {
+        res.status(400).json({ error: 'one or more transactions not found or do not belong to this account' });
+        return;
+    }
+    res.status(204).send();
+});
+
 router.delete<{ accountId: string; id: string }>('/:id', (req, res) => {
     const accountId = parseInt(req.params.accountId, 10);
     const id = parseInt(req.params.id, 10);
