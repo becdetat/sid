@@ -46,8 +46,8 @@ router.post<{ accountId: string }>('/', (req, res) => {
         recurrence_end_date?: string;
     };
 
-    if (!description || description.trim() === '') {
-        res.status(400).json({ error: 'description is required' });
+    if (!category || category.trim() === '') {
+        res.status(400).json({ error: 'category is required' });
         return;
     }
     if (amount === undefined || amount === null || isNaN(Number(amount)) || Number(amount) <= 0) {
@@ -80,10 +80,11 @@ router.post<{ accountId: string }>('/', (req, res) => {
         }
     }
 
+    const categoryTrimmed = category.trim();
     const transaction = repo.create({
         account_id: accountId,
-        category: category?.trim() || undefined,
-        description: description.trim(),
+        category: categoryTrimmed,
+        description: description?.trim() || categoryTrimmed,
         amount: Number(amount),
         type,
         date: date.trim(),
@@ -127,8 +128,8 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         scope?: string;
     };
 
-    if (description !== undefined && description.trim() === '') {
-        res.status(400).json({ error: 'description cannot be empty' });
+    if (category !== undefined && (category === null || category.trim() === '')) {
+        res.status(400).json({ error: 'category cannot be empty' });
         return;
     }
     if (amount !== undefined && (isNaN(Number(amount)) || Number(amount) <= 0)) {
@@ -144,10 +145,15 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
+    const categoryTrimmed = typeof category === 'string' ? category.trim() : undefined;
+    const effectiveDescription = description !== undefined
+        ? (description.trim() || (categoryTrimmed ?? existing.category ?? existing.description))
+        : undefined;
+
     const updateInput: repo.UpdateTransactionInput = {
         account_id: account_id !== undefined ? Number(account_id) : undefined,
-        category: category !== undefined ? (typeof category === 'string' ? category.trim() || null : null) : undefined,
-        description: description?.trim(),
+        category: categoryTrimmed !== undefined ? (categoryTrimmed || null) : undefined,
+        description: effectiveDescription,
         amount: amount !== undefined ? Number(amount) : undefined,
         type: type as 'income' | 'expense' | undefined,
         date: date?.trim(),

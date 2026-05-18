@@ -108,6 +108,9 @@ db.exec(`
     );
 `);
 
+// Backfill: transactions with no category get description copied to category
+db.exec(`UPDATE transactions SET category = description WHERE category IS NULL OR category = ''`);
+
 // Seed dashboard_config for existing accounts on first run (no-op if already populated)
 const seeded = (db.prepare('SELECT COUNT(*) AS cnt FROM dashboard_config').get() as { cnt: number }).cnt;
 if (seeded === 0) {

@@ -7,8 +7,8 @@ import ConfirmDialog from './ConfirmDialog';
 import { formatDateTime } from '../utils/format';
 
 interface TransactionData {
-    category: string | null;
-    description: string;
+    category: string;
+    description?: string;
     amount: number;
     type: 'income' | 'expense';
     date: string;
@@ -24,7 +24,7 @@ interface Props {
 }
 
 interface FormErrors {
-    description?: string;
+    category?: string;
     amount?: string;
     date?: string;
     recurrence_end_date?: string;
@@ -112,12 +112,12 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
         setCategory(value);
         setShowSuggestions(false);
-        if (!description.trim()) setDescription(value);
+        setErrors((p) => ({ ...p, category: undefined }));
     }
 
     function validate(): boolean {
         const next: FormErrors = {};
-        if (!description.trim()) next.description = 'Description is required.';
+        if (!category.trim()) next.category = 'Category is required.';
         const parsed = parseFloat(amount);
         if (!amount || isNaN(parsed) || parsed <= 0) next.amount = 'Enter a positive amount.';
         if (!date) next.date = 'Date is required.';
@@ -134,8 +134,8 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         if (!validate()) return;
         onSubmit(
             {
-                category: category.trim() || null,
-                description: description.trim(),
+                category: category.trim(),
+                description: description.trim() || undefined,
                 amount: parseFloat(amount),
                 type,
                 date,
@@ -174,7 +174,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         {/* Category */}
                         <div className="relative">
                             <div className="flex flex-col gap-[5px]">
-                                <label htmlFor="category" className="sid-label">Category (optional)</label>
+                                <label htmlFor="category" className="sid-label">Category</label>
                                 <input
                                     id="category"
                                     type="text"
@@ -182,11 +182,12 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                     className="sid-input"
                                     placeholder="e.g. Shopping"
                                     value={category}
-                                    onChange={(e) => { setCategory(e.target.value); setShowSuggestions(true); if (!description.trim()) setDescription(e.target.value); }}
+                                    onChange={(e) => { setCategory(e.target.value); setShowSuggestions(true); setErrors((p) => ({ ...p, category: undefined })); }}
                                     onFocus={() => setShowSuggestions(true)}
                                     onBlur={handleCategoryBlur}
                                     onKeyDown={(e) => { if (e.key === 'Escape') setShowSuggestions(false); }}
                                 />
+                                {errors.category && <span className="text-xs text-[var(--red)]">{errors.category}</span>}
                             </div>
                             {showSuggestions && suggestions.length > 0 && (
                                 <ul className="sid-suggestions">
@@ -203,15 +204,15 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
 
                         {/* Description */}
                         <div className="flex flex-col gap-[5px]">
-                            <label htmlFor="description" className="sid-label">Description</label>
+                            <label htmlFor="description" className="sid-label">Description (optional)</label>
                             <input
                                 id="description"
                                 type="text"
                                 className="sid-input"
+                                placeholder="Defaults to category if left blank"
                                 value={description}
-                                onChange={(e) => { setDescription(e.target.value); setErrors((p) => ({ ...p, description: undefined })); }}
+                                onChange={(e) => setDescription(e.target.value)}
                             />
-                            {errors.description && <span className="text-xs text-[var(--red)]">{errors.description}</span>}
                         </div>
 
                         {/* Amount */}
