@@ -5,7 +5,7 @@
 - [x] Put account detail actions (download template, import CSV, export CSV) into a dropdown button
 - [x] Make filters a collapsible section, collapsed by default
 - [x] Navigating to an account from "All accounts", the link "Back to dashboard" should be replaced by "Back to all accounts"
-- [ ] Show duration for charts (e.g. "Showing last 3 months")
+- [x] Show duration for charts (e.g. "Showing last 3 months")
 - [ ] Income vs. expense by month (grouped bar chart)
 - [ ] Move dashboard configuration into dashboard itself - remove Settings -> Dashboard
 - [ ] Make description optional, use category as fallback for display if it is set

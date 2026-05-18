@@ -15,6 +15,7 @@ const TILE_TYPE_LABELS: Record<TileType, string> = {
     transactions: 'Transactions',
     balance_over_time: 'Balance over time',
     totals_by_category: 'Totals by category',
+    income_vs_expense: 'Income vs Expense',
 };
 
 const WINDOW_OPTIONS = [
@@ -23,6 +24,13 @@ const WINDOW_OPTIONS = [
     { value: '12m', label: 'Last 12 months' },
     { value: 'all', label: 'All time' },
     { value: 'custom_weeks', label: 'Last X weeks' },
+];
+
+const INCOME_VS_EXPENSE_WINDOW_OPTIONS = [
+    { value: '3m', label: 'Last 3 months' },
+    { value: '6m', label: 'Last 6 months' },
+    { value: '12m', label: 'Last 12 months' },
+    { value: 'all', label: 'All time' },
 ];
 
 function tileLabel(item: DashboardConfigItem, accountName: string): string {
@@ -118,18 +126,20 @@ export default function DashboardSection() {
     }
 
     const isChartType = addTileType === 'balance_over_time' || addTileType === 'totals_by_category';
+    const isIncomeVsExpenseType = addTileType === 'income_vs_expense';
+    const needsWindow = isChartType || isIncomeVsExpenseType;
     const timeWindow = resolvedTimeWindow();
     const canAdd =
         addAccountId !== '' &&
         addTileType !== '' &&
-        (!isChartType || (addWindowOption !== '' && (addWindowOption !== 'custom_weeks' || isValidWeeks(addWeeks))));
+        (!needsWindow || (addWindowOption !== '' && (addWindowOption !== 'custom_weeks' || isValidWeeks(addWeeks))));
 
     function handleAdd() {
         if (!canAdd || !addTileType) return;
         addMutation.mutate({
             accountId: parseInt(addAccountId, 10),
             tileType: addTileType,
-            timeWindow: isChartType ? timeWindow : undefined,
+            timeWindow: needsWindow ? timeWindow : undefined,
         });
     }
 
@@ -242,6 +252,7 @@ export default function DashboardSection() {
                         <option value="transactions">Transactions</option>
                         <option value="balance_over_time">Balance over time</option>
                         <option value="totals_by_category">Totals by category</option>
+                        <option value="income_vs_expense">Income vs Expense</option>
                     </select>
 
                     {isChartType && (
@@ -256,6 +267,20 @@ export default function DashboardSection() {
                         >
                             <option value="" disabled>Time window…</option>
                             {WINDOW_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                        </select>
+                    )}
+
+                    {isIncomeVsExpenseType && (
+                        <select
+                            aria-label="Time window"
+                            className={inputCls}
+                            value={addWindowOption}
+                            onChange={(e) => setAddWindowOption(e.target.value)}
+                        >
+                            <option value="" disabled>Time window…</option>
+                            {INCOME_VS_EXPENSE_WINDOW_OPTIONS.map((o) => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
                             ))}
                         </select>

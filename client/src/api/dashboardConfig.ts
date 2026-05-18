@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const base = '/api/dashboard-config';
 
-export type TileType = 'transactions' | 'balance_over_time' | 'totals_by_category';
+export type TileType = 'transactions' | 'balance_over_time' | 'totals_by_category' | 'income_vs_expense';
 
 export interface DashboardConfigItem {
     id: number;

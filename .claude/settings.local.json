@@ -7,7 +7,10 @@
       "Bash(npm ls *)",
       "Bash(npm test *)",
       "Bash(xargs grep *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\development\\\\tanby-dynamics\\\\sid\" -Recurse -Directory -Depth 3)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-Table FullName)"
     ]
   }
 }

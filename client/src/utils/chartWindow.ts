@@ -1,6 +1,7 @@
 export function formatChartWindow(window: string): string {
     if (window === '30d') return 'Last 30 days';
     if (window === '3m') return 'Last 3 months';
+    if (window === '6m') return 'Last 6 months';
     if (window === '12m') return 'Last 12 months';
     if (window === 'all') return 'All time';
 

@@ -1,5 +1,11 @@
 import db from '../db';
 
+export interface IncomeVsExpensePoint {
+    month: string;
+    income_cents: number;
+    expense_cents: number;
+}
+
 export interface BalancePoint {
     date: string;
     balance_cents: number;
@@ -21,6 +27,10 @@ export function parseWindowToFromDate(window: string): string | null {
         now.setMonth(now.getMonth() - 3);
         return now.toISOString().slice(0, 10);
     }
+    if (window === '6m') {
+        now.setMonth(now.getMonth() - 6);
+        return now.toISOString().slice(0, 10);
+    }
     if (window === '12m') {
         now.setFullYear(now.getFullYear() - 1);
         return now.toISOString().slice(0, 10);
@@ -35,7 +45,7 @@ export function parseWindowToFromDate(window: string): string | null {
 }
 
 export function isValidWindow(window: string): boolean {
-    if (window === 'all' || window === '30d' || window === '3m' || window === '12m') return true;
+    if (window === 'all' || window === '30d' || window === '3m' || window === '6m' || window === '12m') return true;
     const m = window.match(/^(\d+)w$/);
     if (m) {
         const n = parseInt(m[1], 10);
@@ -97,6 +107,60 @@ export function getBalanceOverTime(accountId: number, fromDate: string | null): 
     }
 
     return points;
+}
+
+export function getIncomeVsExpenseByMonth(accountId: number, fromDate: string | null): IncomeVsExpensePoint[] {
+    const rows = fromDate
+        ? (db
+              .prepare(
+                  `SELECT strftime('%Y-%m', date) as month, type, SUM(amount_cents) as total_cents
+                   FROM transactions
+                   WHERE account_id = ? AND deleted_at IS NULL AND date >= ?
+                   GROUP BY month, type
+                   ORDER BY month`,
+              )
+              .all(accountId, fromDate) as { month: string; type: string; total_cents: number }[])
+        : (db
+              .prepare(
+                  `SELECT strftime('%Y-%m', date) as month, type, SUM(amount_cents) as total_cents
+                   FROM transactions
+                   WHERE account_id = ? AND deleted_at IS NULL
+                   GROUP BY month, type
+                   ORDER BY month`,
+              )
+              .all(accountId) as { month: string; type: string; total_cents: number }[]);
+
+    if (rows.length === 0) return [];
+
+    // Determine the month range
+    const now = new Date();
+    const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const firstMonth = fromDate
+        ? `${fromDate.slice(0, 4)}-${fromDate.slice(5, 7)}`
+        : rows[0].month;
+
+    // Build a map from the query results
+    const map = new Map<string, { income_cents: number; expense_cents: number }>();
+    for (const row of rows) {
+        if (!map.has(row.month)) map.set(row.month, { income_cents: 0, expense_cents: 0 });
+        const entry = map.get(row.month)!;
+        if (row.type === 'income') entry.income_cents += row.total_cents;
+        else if (row.type === 'expense') entry.expense_cents += Math.abs(row.total_cents);
+    }
+
+    // Fill all months in the window
+    const result: IncomeVsExpensePoint[] = [];
+    let [y, m] = firstMonth.split('-').map(Number);
+    const [ey, em] = endMonth.split('-').map(Number);
+    while (y < ey || (y === ey && m <= em)) {
+        const key = `${y}-${String(m).padStart(2, '0')}`;
+        const entry = map.get(key) ?? { income_cents: 0, expense_cents: 0 };
+        result.push({ month: key, ...entry });
+        m++;
+        if (m > 12) { m = 1; y++; }
+    }
+
+    return result;
 }
 
 export function getCategoryTotals(accountId: number, fromDate: string | null): CategoryTotal[] {

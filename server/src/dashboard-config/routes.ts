@@ -5,12 +5,12 @@ import type { TileType } from './repository';
 
 const router = Router();
 
-const VALID_TILE_TYPES: TileType[] = ['transactions', 'balance_over_time', 'totals_by_category'];
+const VALID_TILE_TYPES: TileType[] = ['transactions', 'balance_over_time', 'totals_by_category', 'income_vs_expense'];
 const VALID_WINDOWS = /^(\d+[dw]|[0-9]+m|all)$/;
 
 function isValidWindow(w: string): boolean {
     if (w === 'all') return true;
-    if (w === '30d' || w === '3m' || w === '12m') return true;
+    if (w === '30d' || w === '3m' || w === '6m' || w === '12m') return true;
     const weeksMatch = w.match(/^(\d+)w$/);
     if (weeksMatch) {
         const n = parseInt(weeksMatch[1], 10);
@@ -31,7 +31,7 @@ router.post('/:accountId', (req, res) => {
     }
     const { tile_type, time_window } = req.body as { tile_type?: string; time_window?: string };
     if (!tile_type || !VALID_TILE_TYPES.includes(tile_type as TileType)) {
-        res.status(400).json({ error: 'tile_type must be one of: transactions, balance_over_time, totals_by_category' });
+        res.status(400).json({ error: 'tile_type must be one of: transactions, balance_over_time, totals_by_category, income_vs_expense' });
         return;
     }
     const tileType = tile_type as TileType;

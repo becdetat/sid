@@ -23,3 +23,16 @@ export async function getCategoryChart(accountId: number, window: string): Promi
     });
     return data;
 }
+
+export interface IncomeVsExpenseDataPoint {
+    month: string;
+    income_cents: number;
+    expense_cents: number;
+}
+
+export async function getIncomeVsExpenseChart(accountId: number, window: string): Promise<IncomeVsExpenseDataPoint[]> {
+    const { data } = await axios.get<IncomeVsExpenseDataPoint[]>(`/api/accounts/${accountId}/chart/income-vs-expense`, {
+        params: { window },
+    });
+    return data;
+}

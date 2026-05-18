@@ -3,8 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import AccountsSection from '../components/settings/AccountsSection';
 import DashboardSection from '../components/settings/DashboardSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
-import { listAccountsWithBalances } from '../api/accounts';
-import { useQuery } from '@tanstack/react-query';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
@@ -27,15 +25,8 @@ export default function Settings() {
         isValidSection(initialSection) ? initialSection : 'accounts',
     );
 
-    const { data: accountsWithBalances = [] } = useQuery({
-        queryKey: ['accounts-balances'],
-        queryFn: listAccountsWithBalances,
-    });
-
-    const totalBalance = accountsWithBalances.reduce((s, a) => s + a.balance_cents, 0);
-
     return (
-        <Page pageTitle="Settings" balance={totalBalance}>
+        <Page pageTitle="Settings">
             <PageLink to="/dashboard">&larr; Back to dashboard</PageLink>
 
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-12 items-start">
