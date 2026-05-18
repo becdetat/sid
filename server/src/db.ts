@@ -59,6 +59,18 @@ try {
     // column already exists
 }
 
+try {
+    db.exec(`ALTER TABLE transactions ADD COLUMN recurrence TEXT CHECK(recurrence IN ('daily','weekly','fortnightly','monthly','yearly') OR recurrence IS NULL)`);
+} catch { /* column already exists */ }
+
+try {
+    db.exec(`ALTER TABLE transactions ADD COLUMN recurrence_end_date DATE`);
+} catch { /* column already exists */ }
+
+try {
+    db.exec(`ALTER TABLE transactions ADD COLUMN recurrence_source_id INTEGER REFERENCES transactions(id)`);
+} catch { /* column already exists */ }
+
 db.exec(`
     CREATE TABLE IF NOT EXISTS budgets (
         id                INTEGER PRIMARY KEY AUTOINCREMENT,

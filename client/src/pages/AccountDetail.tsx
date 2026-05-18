@@ -22,13 +22,16 @@ import TransactionRow from '../components/TransactionRow';
 import BulkActionBar from '../components/BulkActionBar';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
+import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import type { Transaction } from '../types/transaction';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
 type Modal =
     | { type: 'create' }
-    | { type: 'edit'; transaction: Transaction }
+    | { type: 'edit-scope'; transaction: Transaction }
+    | { type: 'edit'; transaction: Transaction; scope?: 'one' | 'future' }
+    | { type: 'delete-scope'; transaction: Transaction }
     | { type: 'delete'; transaction: Transaction }
     | { type: 'bulk-delete' }
     | null;
@@ -222,7 +225,8 @@ export default function AccountDetail() {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: (txId: number) => deleteTransaction(accountId, txId),
+        mutationFn: ({ txId, scope }: { txId: number; scope?: 'one' | 'future' }) =>
+            deleteTransaction(accountId, txId, scope),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
             setModal(null);
@@ -258,8 +262,8 @@ export default function AccountDetail() {
         toast.success('Transaction added.');
     }
 
-    async function handleUpdate(txId: number, data: TransactionPayload, pendingFiles: File[]) {
-        await updateMutation.mutateAsync({ id: txId, data });
+    async function handleUpdate(txId: number, data: TransactionPayload, pendingFiles: File[], scope?: 'one' | 'future') {
+        await updateMutation.mutateAsync({ id: txId, data: { ...data, scope } });
         queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
         if (pendingFiles.length > 0) {
             try {
@@ -529,8 +533,20 @@ export default function AccountDetail() {
                             transaction={t}
                             isLast={idx === transactions.length - 1}
                             gridTemplate={TX_GRID}
-                            onEdit={(tx) => setModal({ type: 'edit', transaction: tx })}
-                            onDelete={(tx) => setModal({ type: 'delete', transaction: tx })}
+                            onEdit={(tx) => {
+                                if (tx.recurrence || tx.recurrence_source_id) {
+                                    setModal({ type: 'edit-scope', transaction: tx });
+                                } else {
+                                    setModal({ type: 'edit', transaction: tx });
+                                }
+                            }}
+                            onDelete={(tx) => {
+                                if (tx.recurrence || tx.recurrence_source_id) {
+                                    setModal({ type: 'delete-scope', transaction: tx });
+                                } else {
+                                    setModal({ type: 'delete', transaction: tx });
+                                }
+                            }}
                             isSelected={selectedIds.has(t.id)}
                             onSelect={handleSelectRow}
                         />
@@ -544,17 +560,33 @@ export default function AccountDetail() {
                     onCancel={() => setModal(null)}
                 />
             )}
+            {modal?.type === 'edit-scope' && (
+                <RecurrenceScopeDialog
+                    action="edit"
+                    onJustThis={() => setModal({ type: 'edit', transaction: modal.transaction, scope: 'one' })}
+                    onFuture={() => setModal({ type: 'edit', transaction: modal.transaction, scope: 'future' })}
+                    onCancel={() => setModal(null)}
+                />
+            )}
             {modal?.type === 'edit' && (
                 <TransactionForm
                     initial={modal.transaction}
-                    onSubmit={(data, files) => handleUpdate(modal.transaction.id, data, files)}
+                    onSubmit={(data, files) => handleUpdate(modal.transaction.id, data, files, modal.scope)}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'delete-scope' && (
+                <RecurrenceScopeDialog
+                    action="delete"
+                    onJustThis={() => deleteMutation.mutate({ txId: modal.transaction.id, scope: 'one' })}
+                    onFuture={() => deleteMutation.mutate({ txId: modal.transaction.id, scope: 'future' })}
                     onCancel={() => setModal(null)}
                 />
             )}
             {modal?.type === 'delete' && (
                 <ConfirmDialog
                     message={`Delete "${modal.transaction.description}"? This will also delete any attachments.`}
-                    onConfirm={() => deleteMutation.mutate(modal.transaction.id)}
+                    onConfirm={() => deleteMutation.mutate({ txId: modal.transaction.id })}
                     onCancel={() => setModal(null)}
                 />
             )}

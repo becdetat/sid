@@ -42,9 +42,17 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
         enabled: expanded,
     });
 
+    const isTemplate = !!transaction.recurrence && !transaction.recurrence_source_id;
+    const isGenerated = !!transaction.recurrence_source_id;
+
     const typeBadge = (
-        <span className={`inline-block px-2 py-[3px] rounded-full text-[11px] font-bold ${isIncome ? 'bg-[var(--green-light)] text-[var(--green)]' : 'bg-[var(--red-light)] text-[var(--red)]'}`}>
-            {transaction.type}
+        <span className="flex items-center gap-1">
+            <span className={`inline-block px-2 py-[3px] rounded-full text-[11px] font-bold ${isIncome ? 'bg-[var(--green-light)] text-[var(--green)]' : 'bg-[var(--red-light)] text-[var(--red)]'}`}>
+                {transaction.type}
+            </span>
+            {(isTemplate || isGenerated) && (
+                <span title={isGenerated ? 'Auto-generated' : 'Recurring template'} className="text-[var(--text-muted)] text-[13px] leading-none">↻</span>
+            )}
         </span>
     );
 
@@ -142,6 +150,14 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
             {/* Expanded detail panel */}
             {expanded && (
                 <div className="px-4 sm:px-5 py-4 bg-[var(--cream)] flex flex-col gap-3">
+                    {isGenerated && (
+                        <p className="text-xs text-[var(--text-muted)] italic">Auto-generated from recurring transaction</p>
+                    )}
+                    {isTemplate && (
+                        <p className="text-xs text-[var(--text-muted)] italic">
+                            Recurring {transaction.recurrence}{transaction.recurrence_end_date ? ` until ${transaction.recurrence_end_date}` : ''}
+                        </p>
+                    )}
                     {transaction.notes && (
                         <div>
                             <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] mb-1">Notes</div>

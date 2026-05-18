@@ -44,6 +44,8 @@ export interface TransactionPayload {
     date: string;
     notes?: string | null;
     account_id?: number;
+    recurrence?: string | null;
+    recurrence_end_date?: string | null;
 }
 
 export async function createTransaction(
@@ -57,14 +59,18 @@ export async function createTransaction(
 export async function updateTransaction(
     accountId: number,
     id: number,
-    payload: Partial<TransactionPayload>,
+    payload: Partial<TransactionPayload> & { scope?: 'one' | 'future' },
 ): Promise<Transaction> {
     const { data } = await axios.put<Transaction>(`${base(accountId)}/${id}`, payload);
     return data;
 }
 
-export async function deleteTransaction(accountId: number, id: number): Promise<void> {
-    await axios.delete(`${base(accountId)}/${id}`);
+export async function deleteTransaction(
+    accountId: number,
+    id: number,
+    scope?: 'one' | 'future',
+): Promise<void> {
+    await axios.delete(`${base(accountId)}/${id}`, scope ? { data: { scope } } : undefined);
 }
 
 export async function bulkDeleteTransactions(accountId: number, ids: number[]): Promise<void> {

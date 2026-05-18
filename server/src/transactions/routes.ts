@@ -35,13 +35,15 @@ router.post<{ accountId: string }>('/', (req, res) => {
         return;
     }
 
-    const { category, description, amount, type, date, notes } = req.body as {
+    const { category, description, amount, type, date, notes, recurrence, recurrence_end_date } = req.body as {
         category?: string;
         description?: string;
         amount?: number;
         type?: string;
         date?: string;
         notes?: string;
+        recurrence?: string;
+        recurrence_end_date?: string;
     };
 
     if (!description || description.trim() === '') {
@@ -61,6 +63,23 @@ router.post<{ accountId: string }>('/', (req, res) => {
         return;
     }
 
+    const VALID_RECURRENCES = ['daily', 'weekly', 'fortnightly', 'monthly', 'yearly'];
+    if (recurrence !== undefined && !VALID_RECURRENCES.includes(recurrence)) {
+        res.status(400).json({ error: 'invalid recurrence value' });
+        return;
+    }
+    if (recurrence_end_date) {
+        if (recurrence_end_date <= date.trim()) {
+            res.status(400).json({ error: 'End date must be after the transaction date' });
+            return;
+        }
+        const today = new Date().toISOString().slice(0, 10);
+        if (recurrence_end_date <= today) {
+            res.status(400).json({ error: 'End date must be in the future' });
+            return;
+        }
+    }
+
     const transaction = repo.create({
         account_id: accountId,
         category: category?.trim() || undefined,
@@ -69,6 +88,8 @@ router.post<{ accountId: string }>('/', (req, res) => {
         type,
         date: date.trim(),
         notes: notes?.trim() || undefined,
+        recurrence: recurrence as repo.RecurrenceFrequency | undefined,
+        recurrence_end_date: recurrence_end_date || undefined,
     });
     res.status(201).json(transaction);
 });
@@ -93,7 +114,7 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
-    const { category, description, amount, type, date, notes, account_id } = req.body as {
+    const { category, description, amount, type, date, notes, account_id, recurrence, recurrence_end_date, scope } = req.body as {
         category?: string | null;
         description?: string;
         amount?: number;
@@ -101,6 +122,9 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         date?: string;
         notes?: string | null;
         account_id?: number;
+        recurrence?: string | null;
+        recurrence_end_date?: string | null;
+        scope?: string;
     };
 
     if (description !== undefined && description.trim() === '') {
@@ -120,7 +144,7 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
-    const updated = repo.update(id, {
+    const updateInput: repo.UpdateTransactionInput = {
         account_id: account_id !== undefined ? Number(account_id) : undefined,
         category: category !== undefined ? (typeof category === 'string' ? category.trim() || null : null) : undefined,
         description: description?.trim(),
@@ -128,12 +152,28 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         type: type as 'income' | 'expense' | undefined,
         date: date?.trim(),
         notes: notes !== undefined ? (notes?.trim() || null) : undefined,
-    });
+    };
+    if ('recurrence' in req.body) updateInput.recurrence = (recurrence ?? null) as repo.RecurrenceFrequency | null;
+    if ('recurrence_end_date' in req.body) updateInput.recurrence_end_date = recurrence_end_date ?? null;
+
+    const updated = repo.update(id, updateInput);
 
     if (!updated) {
         res.status(404).json({ error: 'transaction not found' });
         return;
     }
+
+    // "This and all future" scope: update the template and soft-delete future generated instances
+    if (scope === 'future') {
+        const templateId = existing.recurrence_source_id ?? existing.id;
+        // Update the template with the same field changes
+        const templateInput: repo.UpdateTransactionInput = { ...updateInput };
+        delete templateInput.date; // don't move the template's date
+        repo.update(templateId, templateInput);
+        // Soft-delete all generated transactions after the selected one's date
+        repo.softDeleteFutureOccurrences(templateId, existing.date);
+    }
+
     res.json(updated);
 });
 
@@ -168,7 +208,25 @@ router.delete<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
-    repo.softDelete(id);
+    const { scope } = req.body as { scope?: string };
+
+    if (scope === 'future') {
+        const templateId = existing.recurrence_source_id ?? existing.id;
+        repo.softDeleteFutureOccurrences(templateId, existing.date);
+        if (existing.recurrence_source_id) {
+            // It's a generated transaction — update template end date to day before this one
+            const [y, m, d] = existing.date.split('-').map(Number);
+            const prev = new Date(y, m - 1, d - 1);
+            const prevStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
+            repo.updateTemplateEndDate(templateId, prevStr);
+        } else {
+            // It IS the template — soft-delete the template itself
+            repo.softDelete(id);
+        }
+    } else {
+        repo.softDelete(id);
+    }
+
     res.status(204).send();
 });
 

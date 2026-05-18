@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { Transaction } from '../types/transaction';
+import type { Transaction, RecurrenceFrequency } from '../types/transaction';
 import { getCategories } from '../api/categories';
 import AttachmentManager from './AttachmentManager';
 import ConfirmDialog from './ConfirmDialog';
@@ -13,6 +13,8 @@ interface TransactionData {
     type: 'income' | 'expense';
     date: string;
     notes: string | null;
+    recurrence?: RecurrenceFrequency | null;
+    recurrence_end_date?: string | null;
 }
 
 interface Props {
@@ -25,13 +27,23 @@ interface FormErrors {
     description?: string;
     amount?: string;
     date?: string;
+    recurrence_end_date?: string;
 }
+
+const RECURRENCE_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'fortnightly', label: 'Fortnightly' },
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'yearly', label: 'Yearly' },
+];
 
 function centsToDisplay(cents: number): string {
     return (Math.abs(cents) / 100).toFixed(2);
 }
 
 export default function TransactionForm({ initial, onSubmit, onCancel }: Props) {
+    const isGenerated = !!initial?.recurrence_source_id;
     const [type, setType] = useState<'income' | 'expense'>(initial?.type ?? 'expense');
     const [category, setCategory] = useState(initial?.category ?? '');
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -39,6 +51,9 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     const [amount, setAmount] = useState(initial ? centsToDisplay(initial.amount_cents) : '');
     const [date, setDate] = useState(initial?.date ?? new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState(initial?.notes ?? '');
+    const [repeat, setRepeat] = useState(!!initial?.recurrence);
+    const [recurrence, setRecurrence] = useState<RecurrenceFrequency>(initial?.recurrence ?? 'monthly');
+    const [recurrenceEndDate, setRecurrenceEndDate] = useState(initial?.recurrence_end_date ?? '');
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
@@ -52,6 +67,9 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
            amount !== centsToDisplay(initial.amount_cents) ||
            date !== initial.date ||
            notes !== (initial.notes ?? '') ||
+           repeat !== !!initial.recurrence ||
+           recurrence !== (initial.recurrence ?? 'monthly') ||
+           recurrenceEndDate !== (initial.recurrence_end_date ?? '') ||
            pendingFiles.length > 0)
         : (type !== 'expense' ||
            category !== '' ||
@@ -59,6 +77,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
            amount !== '' ||
            date !== today ||
            notes !== '' ||
+           repeat ||
            pendingFiles.length > 0);
 
     const { data: allCategories = [] } = useQuery({
@@ -102,6 +121,10 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
         const parsed = parseFloat(amount);
         if (!amount || isNaN(parsed) || parsed <= 0) next.amount = 'Enter a positive amount.';
         if (!date) next.date = 'Date is required.';
+        if (repeat && recurrenceEndDate) {
+            if (recurrenceEndDate <= date) next.recurrence_end_date = 'End date must be after the transaction date.';
+            else if (recurrenceEndDate <= today) next.recurrence_end_date = 'End date must be in the future.';
+        }
         setErrors(next);
         return Object.keys(next).length === 0;
     }
@@ -117,6 +140,8 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                 type,
                 date,
                 notes: notes.trim() || null,
+                recurrence: repeat ? recurrence : null,
+                recurrence_end_date: repeat && recurrenceEndDate ? recurrenceEndDate : null,
             },
             pendingFiles,
         );
@@ -225,6 +250,47 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                 onChange={(e) => setNotes(e.target.value)}
                             />
                         </div>
+
+                        {/* Repeat */}
+                        {!isGenerated && (
+                            <div className="flex flex-col gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={repeat}
+                                        onChange={(e) => setRepeat(e.target.checked)}
+                                        className="w-4 h-4 accent-[var(--accent)]"
+                                    />
+                                    <span className="sid-label mb-0">Repeat</span>
+                                </label>
+                                {repeat && (
+                                    <div className="flex flex-col gap-3 pl-6">
+                                        <div className="flex flex-col gap-[5px]">
+                                            <label className="sid-label">Frequency</label>
+                                            <select
+                                                className="sid-input"
+                                                value={recurrence}
+                                                onChange={(e) => setRecurrence(e.target.value as RecurrenceFrequency)}
+                                            >
+                                                {RECURRENCE_OPTIONS.map((o) => (
+                                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex flex-col gap-[5px]">
+                                            <label className="sid-label">End date (optional)</label>
+                                            <input
+                                                type="date"
+                                                className="sid-input"
+                                                value={recurrenceEndDate}
+                                                onChange={(e) => { setRecurrenceEndDate(e.target.value); setErrors((p) => ({ ...p, recurrence_end_date: undefined })); }}
+                                            />
+                                            {errors.recurrence_end_date && <span className="text-xs text-[var(--red)]">{errors.recurrence_end_date}</span>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Attachments */}
                         <AttachmentManager

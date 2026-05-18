@@ -74,8 +74,8 @@ router.post('/import', upload.single('file'), (req, res) => {
     }
 
     // Normalise v1 backups that lack the budgets array
-    if (!Array.isArray((payload as Record<string, unknown>).budgets)) {
-        (payload as Record<string, unknown>).budgets = [];
+    if (!Array.isArray((payload as unknown as Record<string, unknown>).budgets)) {
+        (payload as unknown as Record<string, unknown>).budgets = [];
     }
 
     for (const att of payload.attachments) {

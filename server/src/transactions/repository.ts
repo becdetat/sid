@@ -1,5 +1,7 @@
 import db from '../db';
 
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly';
+
 export interface Transaction {
     id: number;
     account_id: number;
@@ -12,6 +14,9 @@ export interface Transaction {
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
+    recurrence: RecurrenceFrequency | null;
+    recurrence_end_date: string | null;
+    recurrence_source_id: number | null;
 }
 
 export interface CreateTransactionInput {
@@ -22,6 +27,8 @@ export interface CreateTransactionInput {
     type: 'income' | 'expense';
     date: string;
     notes?: string;
+    recurrence?: RecurrenceFrequency;
+    recurrence_end_date?: string;
 }
 
 export interface UpdateTransactionInput {
@@ -32,6 +39,8 @@ export interface UpdateTransactionInput {
     type?: 'income' | 'expense';
     date?: string;
     notes?: string | null;
+    recurrence?: RecurrenceFrequency | null;
+    recurrence_end_date?: string | null;
 }
 
 function toAmountCents(amount: number, type: 'income' | 'expense'): number {
@@ -97,8 +106,8 @@ export function create(input: CreateTransactionInput): Transaction {
     const amount_cents = toAmountCents(input.amount, input.type);
     const result = db
         .prepare(
-            `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, recurrence, recurrence_end_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
             input.account_id,
@@ -108,6 +117,8 @@ export function create(input: CreateTransactionInput): Transaction {
             input.type,
             input.date,
             input.notes ?? null,
+            input.recurrence ?? null,
+            input.recurrence_end_date ?? null,
         );
     return findById(result.lastInsertRowid as number)!;
 }
@@ -124,7 +135,7 @@ export function update(id: number, input: UpdateTransactionInput): Transaction |
     db.prepare(
         `UPDATE transactions
          SET account_id = ?, category = ?, description = ?, amount_cents = ?, type = ?, date = ?, notes = ?,
-             updated_at = datetime('now')
+             recurrence = ?, recurrence_end_date = ?, updated_at = datetime('now')
          WHERE id = ? AND deleted_at IS NULL`,
     ).run(
         input.account_id ?? existing.account_id,
@@ -134,6 +145,8 @@ export function update(id: number, input: UpdateTransactionInput): Transaction |
         newType,
         input.date ?? existing.date,
         input.notes !== undefined ? input.notes : existing.notes,
+        'recurrence' in input ? (input.recurrence ?? null) : existing.recurrence,
+        'recurrence_end_date' in input ? (input.recurrence_end_date ?? null) : existing.recurrence_end_date,
         id,
     );
     return findById(id);
@@ -186,6 +199,26 @@ export function findByIds(ids: number[], accountId: number): Transaction[] {
     return db
         .prepare(`SELECT * FROM transactions WHERE id IN (${placeholders}) AND account_id = ? AND deleted_at IS NULL ORDER BY date DESC, id DESC`)
         .all(...ids, accountId) as Transaction[];
+}
+
+export function softDeleteFutureOccurrences(templateId: number, fromDate: string): void {
+    const toDeleteIds = db
+        .prepare(
+            `SELECT id FROM transactions
+             WHERE recurrence_source_id = ? AND date >= ? AND deleted_at IS NULL`,
+        )
+        .all(templateId, fromDate)
+        .map((r) => (r as { id: number }).id);
+
+    if (toDeleteIds.length === 0) return;
+
+    const placeholders = toDeleteIds.map(() => '?').join(',');
+    db.prepare(`UPDATE attachments SET deleted_at = datetime('now') WHERE transaction_id IN (${placeholders}) AND deleted_at IS NULL`).run(...toDeleteIds);
+    db.prepare(`UPDATE transactions SET deleted_at = datetime('now') WHERE id IN (${placeholders}) AND deleted_at IS NULL`).run(...toDeleteIds);
+}
+
+export function updateTemplateEndDate(templateId: number, endDate: string): void {
+    db.prepare(`UPDATE transactions SET recurrence_end_date = ?, updated_at = datetime('now') WHERE id = ? AND deleted_at IS NULL`).run(endDate, templateId);
 }
 
 export function getBalance(accountId: number): number {
