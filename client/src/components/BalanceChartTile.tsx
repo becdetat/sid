@@ -69,6 +69,7 @@ export default function BalanceChartTile({ accountId, accountName, window }: Pro
                             <XAxis
                                 dataKey="date"
                                 tickFormatter={(d) => {
+                                    // parseInt strips leading zeros ("05" → 5) that raw string slices would keep
                                     const [, m, day] = d.split('-');
                                     return `${parseInt(day)}/${parseInt(m)}`;
                                 }}

@@ -35,6 +35,7 @@ router.post('/:accountId', (req, res) => {
         return;
     }
     const tileType = tile_type as TileType;
+    // 'transactions' shows live data; 'budget_progress' uses per-budget periods — neither needs a window
     const needsWindow = tileType !== 'transactions' && tileType !== 'budget_progress';
     if (needsWindow) {
         if (!time_window) {

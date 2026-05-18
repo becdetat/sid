@@ -86,6 +86,8 @@ db.exec(`
     );
 `);
 
+// ALTER runs before CREATE: if dashboard_config doesn't exist the ALTER throws and is swallowed,
+// then CREATE TABLE IF NOT EXISTS creates it with the columns already in the schema definition.
 try {
     db.exec(`ALTER TABLE dashboard_config ADD COLUMN tile_type TEXT DEFAULT 'transactions'`);
 } catch {

@@ -43,6 +43,7 @@ export interface UpdateTransactionInput {
     recurrence_end_date?: string | null;
 }
 
+// Expenses are stored as negative cents; income as positive. UI always displays absolute values.
 function toAmountCents(amount: number, type: 'income' | 'expense'): number {
     const abs = Math.round(Math.abs(amount) * 100);
     return type === 'income' ? abs : -abs;
@@ -84,6 +85,7 @@ export function findByAccount(accountId: number, filters?: TransactionFilters): 
         params.push(filters.type);
     }
     if (filters?.amountMin !== undefined) {
+        // ABS() because expenses are stored as negative but the user provides a positive bound
         conditions.push('ABS(amount_cents) >= ?');
         params.push(Math.round(filters.amountMin * 100));
     }
@@ -145,6 +147,7 @@ export function update(id: number, input: UpdateTransactionInput): Transaction |
         newType,
         input.date ?? existing.date,
         input.notes !== undefined ? input.notes : existing.notes,
+        // 'in' rather than !== undefined: allows passing null to explicitly clear the recurrence
         'recurrence' in input ? (input.recurrence ?? null) : existing.recurrence,
         'recurrence_end_date' in input ? (input.recurrence_end_date ?? null) : existing.recurrence_end_date,
         id,

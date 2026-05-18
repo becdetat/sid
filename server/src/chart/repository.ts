@@ -101,6 +101,7 @@ export function getBalanceOverTime(accountId: number, fromDate: string | null): 
         points.push({ date: row.date, balance_cents: running });
     }
 
+    // Always extend to today so the chart reaches the present even when all transactions are in the past
     const today = new Date().toISOString().slice(0, 10);
     if (points.length === 0 || points[points.length - 1].date < today) {
         points.push({ date: today, balance_cents: running });
@@ -145,7 +146,7 @@ export function getIncomeVsExpenseByMonth(accountId: number, fromDate: string | 
         if (!map.has(row.month)) map.set(row.month, { income_cents: 0, expense_cents: 0 });
         const entry = map.get(row.month)!;
         if (row.type === 'income') entry.income_cents += row.total_cents;
-        else if (row.type === 'expense') entry.expense_cents += Math.abs(row.total_cents);
+        else if (row.type === 'expense') entry.expense_cents += Math.abs(row.total_cents); // stored negative
     }
 
     // Fill all months in the window

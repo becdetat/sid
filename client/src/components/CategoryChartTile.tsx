@@ -44,7 +44,7 @@ export default function CategoryChartTile({ accountId, accountName, window }: Pr
     });
 
     const barHeight = 28;
-    const chartHeight = Math.max(data.length * barHeight + 20, 100);
+    const chartHeight = Math.max(data.length * barHeight + 20, 100); // +20 for axis margin; 100 minimum prevents collapse
 
     return (
         <Tile accountName={accountName} accountId={accountId}>
