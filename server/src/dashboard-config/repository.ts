@@ -1,6 +1,6 @@
 import db from '../db';
 
-export type TileType = 'transactions' | 'balance_over_time' | 'totals_by_category' | 'income_vs_expense';
+export type TileType = 'transactions' | 'balance_over_time' | 'totals_by_category' | 'income_vs_expense' | 'budget_progress';
 
 export interface DashboardConfigItem {
     id: number;

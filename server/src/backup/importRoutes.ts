@@ -11,7 +11,7 @@ function isValidPayload(obj: unknown): obj is BackupPayload {
     if (typeof obj !== 'object' || obj === null) return false;
     const p = obj as Record<string, unknown>;
     return (
-        p.version === 1 &&
+        (p.version === 1 || p.version === 2) &&
         Array.isArray(p.accounts) &&
         Array.isArray(p.transactions) &&
         Array.isArray(p.attachments)
@@ -62,7 +62,8 @@ router.post('/import', upload.single('file'), (req, res) => {
         return;
     }
 
-    if (typeof (payload as Record<string, unknown>).version !== 'number' || (payload as Record<string, unknown>).version !== 1) {
+    const version = (payload as Record<string, unknown>).version;
+    if (typeof version !== 'number' || (version !== 1 && version !== 2)) {
         res.status(422).json({ error: 'Invalid backup: unsupported version' });
         return;
     }
@@ -70,6 +71,11 @@ router.post('/import', upload.single('file'), (req, res) => {
     if (!isValidPayload(payload)) {
         res.status(422).json({ error: 'Invalid backup: missing required data' });
         return;
+    }
+
+    // Normalise v1 backups that lack the budgets array
+    if (!Array.isArray((payload as Record<string, unknown>).budgets)) {
+        (payload as Record<string, unknown>).budgets = [];
     }
 
     for (const att of payload.attachments) {

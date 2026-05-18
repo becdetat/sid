@@ -16,6 +16,7 @@ const TILE_TYPE_LABELS: Record<TileType, string> = {
     balance_over_time: 'Balance over time',
     totals_by_category: 'Totals by category',
     income_vs_expense: 'Income vs Expense',
+    budget_progress: 'Budget Progress',
 };
 
 const WINDOW_OPTIONS = [
@@ -128,6 +129,7 @@ export default function DashboardSection() {
     const isChartType = addTileType === 'balance_over_time' || addTileType === 'totals_by_category';
     const isIncomeVsExpenseType = addTileType === 'income_vs_expense';
     const needsWindow = isChartType || isIncomeVsExpenseType;
+    const isBudgetProgressType = addTileType === 'budget_progress';
     const timeWindow = resolvedTimeWindow();
     const canAdd =
         addAccountId !== '' &&
@@ -253,6 +255,7 @@ export default function DashboardSection() {
                         <option value="balance_over_time">Balance over time</option>
                         <option value="totals_by_category">Totals by category</option>
                         <option value="income_vs_expense">Income vs Expense</option>
+                        <option value="budget_progress">Budget Progress</option>
                     </select>
 
                     {isChartType && (

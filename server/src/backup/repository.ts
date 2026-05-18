@@ -1,5 +1,5 @@
 import db from '../db';
-import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, ImportResult } from './types';
+import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, ImportResult } from './types';
 
 function formatTimestamp(d: Date): string {
     const p = (n: number) => String(n).padStart(2, '0');
@@ -18,12 +18,15 @@ export function exportAll(): BackupPayload {
         data: a.data.toString('base64'),
     }));
 
+    const budgets = db.prepare(`SELECT id, account_id, category, amount_cents, period, warning_threshold, danger_threshold, created_at, deleted_at FROM budgets ORDER BY id`).all() as BackupBudget[];
+
     return {
-        version: 1,
+        version: 2,
         exported_at: new Date().toISOString(),
         accounts,
         transactions,
         attachments,
+        budgets,
     };
 }
 
@@ -71,10 +74,31 @@ export function importMerge(payload: BackupPayload): ImportResult {
             insertAttachment.run(newTxId, att.filename, att.mime_type, att.size_bytes, dataBuffer, att.created_at, att.deleted_at);
         }
 
+        let budgetsImported = 0;
+        if (Array.isArray(p.budgets)) {
+            const upsertBudget = db.prepare(
+                `INSERT INTO budgets (account_id, category, amount_cents, period, warning_threshold, danger_threshold, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(account_id, category) DO UPDATE SET
+                   amount_cents = excluded.amount_cents,
+                   period = excluded.period,
+                   warning_threshold = excluded.warning_threshold,
+                   danger_threshold = excluded.danger_threshold,
+                   deleted_at = excluded.deleted_at`,
+            );
+            for (const budget of p.budgets) {
+                const newAccountId = accountIdMap.get(budget.account_id);
+                if (newAccountId === undefined) continue;
+                upsertBudget.run(newAccountId, budget.category, budget.amount_cents, budget.period, budget.warning_threshold, budget.danger_threshold, budget.created_at, budget.deleted_at);
+                budgetsImported++;
+            }
+        }
+
         return {
             accounts: accountIdMap.size,
             transactions: transactionIdMap.size,
             attachments: p.attachments.filter((a) => transactionIdMap.has(a.transaction_id)).length,
+            budgets: budgetsImported,
         };
     });
 
@@ -90,6 +114,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
         db.prepare(`DELETE FROM dashboard_config`).run();
         db.prepare(`DELETE FROM attachments`).run();
         db.prepare(`DELETE FROM transactions`).run();
+        db.prepare(`DELETE FROM budgets`).run();
         db.prepare(`DELETE FROM accounts`).run();
 
         for (const account of p.accounts) {
@@ -116,10 +141,23 @@ export function importWipe(payload: BackupPayload): ImportResult {
             insertAttachment.run(att.id, att.transaction_id, att.filename, att.mime_type, att.size_bytes, dataBuffer, att.created_at, att.deleted_at);
         }
 
+        let budgetsImported = 0;
+        if (Array.isArray(p.budgets)) {
+            const insertBudget = db.prepare(
+                `INSERT INTO budgets (id, account_id, category, amount_cents, period, warning_threshold, danger_threshold, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            );
+            for (const budget of p.budgets) {
+                insertBudget.run(budget.id, budget.account_id, budget.category, budget.amount_cents, budget.period, budget.warning_threshold, budget.danger_threshold, budget.created_at, budget.deleted_at);
+                budgetsImported++;
+            }
+        }
+
         return {
             accounts: p.accounts.length,
             transactions: p.transactions.length,
             attachments: p.attachments.length,
+            budgets: budgetsImported,
         };
     });
 

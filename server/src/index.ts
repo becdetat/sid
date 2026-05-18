@@ -14,6 +14,7 @@ import categoriesRoutes from './categories/routes';
 import backupExportRoutes from './backup/exportRoutes';
 import backupImportRoutes from './backup/importRoutes';
 import chartRoutes from './chart/routes';
+import budgetRoutes from './budgets/routes';
 
 const app = express();
 const PORT = 3000;
@@ -32,6 +33,7 @@ app.use('/api/dashboard-config', dashboardConfigRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/accounts/:id/export', exportRoutes);
 app.use('/api/accounts/:id/chart', chartRoutes);
+app.use('/api/accounts/:accountId/budgets', budgetRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/accounts/:accountId/transactions/import', importRoutes);
 app.use('/api/accounts/:accountId/transactions', transactionRoutes);

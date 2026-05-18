@@ -5,7 +5,7 @@ import type { TileType } from './repository';
 
 const router = Router();
 
-const VALID_TILE_TYPES: TileType[] = ['transactions', 'balance_over_time', 'totals_by_category', 'income_vs_expense'];
+const VALID_TILE_TYPES: TileType[] = ['transactions', 'balance_over_time', 'totals_by_category', 'income_vs_expense', 'budget_progress'];
 const VALID_WINDOWS = /^(\d+[dw]|[0-9]+m|all)$/;
 
 function isValidWindow(w: string): boolean {
@@ -31,11 +31,12 @@ router.post('/:accountId', (req, res) => {
     }
     const { tile_type, time_window } = req.body as { tile_type?: string; time_window?: string };
     if (!tile_type || !VALID_TILE_TYPES.includes(tile_type as TileType)) {
-        res.status(400).json({ error: 'tile_type must be one of: transactions, balance_over_time, totals_by_category, income_vs_expense' });
+        res.status(400).json({ error: 'tile_type must be one of: transactions, balance_over_time, totals_by_category, income_vs_expense, budget_progress' });
         return;
     }
     const tileType = tile_type as TileType;
-    if (tileType !== 'transactions') {
+    const needsWindow = tileType !== 'transactions' && tileType !== 'budget_progress';
+    if (needsWindow) {
         if (!time_window) {
             res.status(400).json({ error: 'time_window is required for chart tiles' });
             return;
@@ -45,7 +46,7 @@ router.post('/:accountId', (req, res) => {
             return;
         }
     }
-    const item = repo.add(accountId, tileType, tileType !== 'transactions' ? time_window : undefined);
+    const item = repo.add(accountId, tileType, needsWindow ? time_window : undefined);
     res.status(201).json(item);
 });
 

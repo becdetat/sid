@@ -30,16 +30,30 @@ export interface BackupAttachment {
     deleted_at: string | null;
 }
 
+export interface BackupBudget {
+    id: number;
+    account_id: number;
+    category: string;
+    amount_cents: number;
+    period: 'monthly' | 'weekly';
+    warning_threshold: number;
+    danger_threshold: number;
+    created_at: string;
+    deleted_at: string | null;
+}
+
 export interface BackupPayload {
     version: number;
     exported_at: string;
     accounts: BackupAccount[];
     transactions: BackupTransaction[];
     attachments: BackupAttachment[];
+    budgets: BackupBudget[];
 }
 
 export interface ImportResult {
     accounts: number;
     transactions: number;
     attachments: number;
+    budgets: number;
 }

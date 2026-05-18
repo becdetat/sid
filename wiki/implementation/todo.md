@@ -10,5 +10,6 @@
 - [ ] Move dashboard configuration into dashboard itself - remove Settings -> Dashboard
 - [x] Bulk transaction operations
 - [ ] Budget limits per category
+- [ ] Go through the codebase and add comments where they would add meaningful value to the code. Don't add comments for sections that are self-evident.
 - [ ] Recurring transactions
 - [ ] [Make description optional, make category required and use category as fallback for display](https://github.com/tanby-dynamics/sid/issues/28)

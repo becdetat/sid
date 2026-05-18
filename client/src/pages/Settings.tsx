@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AccountsSection from '../components/settings/AccountsSection';
 import DashboardSection from '../components/settings/DashboardSection';
+import BudgetsSection from '../components/settings/BudgetsSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
@@ -9,6 +10,7 @@ import PageLink from '../components/PageLink';
 const navItems = [
     { label: 'Accounts', key: 'accounts' },
     { label: 'Dashboard', key: 'dashboard' },
+    { label: 'Budgets', key: 'budgets' },
     { label: 'Import / Export', key: 'import-export' },
 ] as const;
 
@@ -50,6 +52,7 @@ export default function Settings() {
                 <div className="flex-1 min-w-0 w-full">
                     {section === 'accounts' && <AccountsSection />}
                     {section === 'dashboard' && <DashboardSection />}
+                    {section === 'budgets' && <BudgetsSection />}
                     {section === 'import-export' && <ImportExportSection />}
                 </div>
             </div>

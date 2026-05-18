@@ -59,6 +59,21 @@ try {
     // column already exists
 }
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS budgets (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id        INTEGER NOT NULL REFERENCES accounts(id),
+        category          TEXT NOT NULL,
+        amount_cents      INTEGER NOT NULL,
+        period            TEXT NOT NULL DEFAULT 'monthly' CHECK(period IN ('monthly', 'weekly')),
+        warning_threshold INTEGER NOT NULL DEFAULT 80,
+        danger_threshold  INTEGER NOT NULL DEFAULT 100,
+        created_at        DATETIME NOT NULL DEFAULT (datetime('now')),
+        deleted_at        DATETIME,
+        UNIQUE(account_id, category)
+    );
+`);
+
 try {
     db.exec(`ALTER TABLE dashboard_config ADD COLUMN tile_type TEXT DEFAULT 'transactions'`);
 } catch {

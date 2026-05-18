@@ -6,6 +6,7 @@ import AccountTile from '../components/AccountTile';
 import BalanceChartTile from '../components/BalanceChartTile';
 import CategoryChartTile from '../components/CategoryChartTile';
 import IncomeVsExpenseChartTile from '../components/IncomeVsExpenseChartTile';
+import BudgetProgressTile from '../components/BudgetProgressTile';
 import AccountForm from '../components/AccountForm';
 import SkeletonCard from '../components/SkeletonCard';
 import TransactionForm from '../components/TransactionForm';
@@ -147,6 +148,16 @@ export default function Dashboard() {
                                         accountId={tile.account_id}
                                         accountName={account?.name ?? `Account ${tile.account_id}`}
                                         window={tile.time_window ?? '30d'}
+                                    />
+                                );
+                            }
+                            if (tile.tile_type === 'budget_progress') {
+                                const account = allAccountsWithBalances.find((a) => a.id === tile.account_id);
+                                return (
+                                    <BudgetProgressTile
+                                        key={tile.id}
+                                        accountId={tile.account_id}
+                                        accountName={account?.name ?? `Account ${tile.account_id}`}
                                     />
                                 );
                             }
