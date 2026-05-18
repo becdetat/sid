@@ -91,6 +91,11 @@ export function getBalanceOverTime(accountId: number, fromDate: string | null): 
         points.push({ date: row.date, balance_cents: running });
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+    if (points.length === 0 || points[points.length - 1].date < today) {
+        points.push({ date: today, balance_cents: running });
+    }
+
     return points;
 }
 
