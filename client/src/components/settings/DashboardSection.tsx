@@ -129,7 +129,6 @@ export default function DashboardSection() {
     const isChartType = addTileType === 'balance_over_time' || addTileType === 'totals_by_category';
     const isIncomeVsExpenseType = addTileType === 'income_vs_expense';
     const needsWindow = isChartType || isIncomeVsExpenseType;
-    const isBudgetProgressType = addTileType === 'budget_progress';
     const timeWindow = resolvedTimeWindow();
     const canAdd =
         addAccountId !== '' &&

@@ -48,6 +48,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
     const [category, setCategory] = useState(initial?.category ?? '');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [description, setDescription] = useState(initial?.description ?? '');
+    const [descriptionTouched, setDescriptionTouched] = useState(!!(initial?.description));
     const [amount, setAmount] = useState(initial ? centsToDisplay(initial.amount_cents) : '');
     const [date, setDate] = useState(initial?.date ?? new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState(initial?.notes ?? '');
@@ -182,7 +183,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                     className="sid-input"
                                     placeholder="e.g. Shopping"
                                     value={category}
-                                    onChange={(e) => { setCategory(e.target.value); setShowSuggestions(true); setErrors((p) => ({ ...p, category: undefined })); }}
+                                    onChange={(e) => { const v = e.target.value; setCategory(v); if (!descriptionTouched) setDescription(v); setShowSuggestions(true); setErrors((p) => ({ ...p, category: undefined })); }}
                                     onFocus={() => setShowSuggestions(true)}
                                     onBlur={handleCategoryBlur}
                                     onKeyDown={(e) => { if (e.key === 'Escape') setShowSuggestions(false); }}
@@ -211,7 +212,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                                 className="sid-input"
                                 placeholder="Defaults to category if left blank"
                                 value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                                onChange={(e) => { setDescriptionTouched(true); setDescription(e.target.value); }}
                             />
                         </div>
 

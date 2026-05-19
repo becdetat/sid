@@ -219,7 +219,7 @@ export default function AccountDetail() {
     });
 
     const updateMutation = useMutation({
-        mutationFn: ({ id: txId, data }: { id: number; data: TransactionPayload }) =>
+        mutationFn: ({ id: txId, data }: { id: number; data: TransactionPayload & { scope?: 'one' | 'future' } }) =>
             updateTransaction(accountId, txId, data),
         onError: () => toast.error('Failed to update transaction.'),
     });

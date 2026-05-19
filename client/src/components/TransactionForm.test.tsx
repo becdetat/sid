@@ -16,6 +16,9 @@ const existing: Transaction = {
     created_at: '2024-01-15T00:00:00',
     updated_at: '2024-01-15T00:00:00',
     deleted_at: null,
+    recurrence: null,
+    recurrence_end_date: null,
+    recurrence_source_id: null,
 };
 
 function wrap(ui: React.ReactElement) {
@@ -56,7 +59,7 @@ describe('TransactionForm', () => {
     it('shows validation errors when submitted empty', () => {
         wrap(<TransactionForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
         fireEvent.click(screen.getByRole('button', { name: /save/i }));
-        expect(screen.getByText('Description is required.')).toBeTruthy();
+        expect(screen.getByText('Category is required.')).toBeTruthy();
         expect(screen.getByText('Enter a positive amount.')).toBeTruthy();
     });
 
@@ -85,17 +88,13 @@ describe('TransactionForm', () => {
         );
     });
 
-    it('passes null category when field is empty', () => {
-        const onSubmit = vi.fn();
+    it('shows category validation error when category is empty', () => {
         const noCategory: Transaction = { ...existing, category: null };
-        wrap(<TransactionForm initial={noCategory} onSubmit={onSubmit} onCancel={vi.fn()} />);
+        wrap(<TransactionForm initial={noCategory} onSubmit={vi.fn()} onCancel={vi.fn()} />);
 
         fireEvent.submit(document.querySelector('form')!);
 
-        expect(onSubmit).toHaveBeenCalledWith(
-            expect.objectContaining({ category: null }),
-            [],
-        );
+        expect(screen.getByText('Category is required.')).toBeTruthy();
     });
 
     it('calls onCancel when cancel is clicked', () => {

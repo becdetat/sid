@@ -16,6 +16,9 @@ const expense: Transaction = {
     created_at: '2024-01-15T00:00:00',
     updated_at: '2024-01-15T00:00:00',
     deleted_at: null,
+    recurrence: null,
+    recurrence_end_date: null,
+    recurrence_source_id: null,
 };
 
 const income: Transaction = {
