@@ -64,7 +64,7 @@ router.post<{ accountId: string }>('/', (req, res) => {
     }
 
     const VALID_RECURRENCES = ['daily', 'weekly', 'fortnightly', 'monthly', 'yearly'];
-    if (recurrence !== undefined && !VALID_RECURRENCES.includes(recurrence)) {
+    if (recurrence != null && !VALID_RECURRENCES.includes(recurrence)) {
         res.status(400).json({ error: 'invalid recurrence value' });
         return;
     }
