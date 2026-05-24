@@ -9,7 +9,7 @@ import {
     Cell,
     type TooltipContentProps,
 } from 'recharts';
-import { getCategoryChart } from '../api/charts';
+import { getCategoryChart, type CategoryTotal } from '../api/charts';
 import { formatCents } from '../utils/format';
 import { Tile } from './Tile';
 
@@ -19,6 +19,12 @@ interface Props {
     window: string;
 }
 
+interface CategoryChartEntry extends CategoryTotal {
+    breakdown?: CategoryTotal[];
+}
+
+const TOP_N = 5;
+
 function formatXAxis(value: number): string {
     const abs = Math.abs(value) / 100;
     if (abs >= 1000) return `$${(abs / 1000).toFixed(1)}k`;
@@ -26,13 +32,27 @@ function formatXAxis(value: number): string {
 }
 
 function CustomTooltip({ active, payload, label }: TooltipContentProps) {
-    const value = payload?.[0]?.value;
+    const entry = payload?.[0];
+    const value = entry?.value;
     if (!active || !payload?.length || typeof label !== 'string' || typeof value !== 'number') return null;
+
+    const breakdown = (entry as { payload?: CategoryChartEntry })?.payload?.breakdown;
 
     return (
         <div className="bg-[var(--white)] [border:1.5px_solid_var(--border)] rounded-lg px-3 py-2 shadow-[var(--shadow-md)] text-xs font-body">
             <p className="text-[var(--text-muted)] mb-0.5">{label}</p>
-            <p className="font-semibold text-[var(--text-primary)]">{formatCents(value)}</p>
+            {breakdown ? (
+                <ul className="space-y-0.5">
+                    {breakdown.map((item) => (
+                        <li key={item.category} className="flex justify-between gap-4">
+                            <span className="text-[var(--text-secondary)]">{item.category}</span>
+                            <span className="font-semibold text-[var(--text-primary)]">{formatCents(item.total_cents)}</span>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="font-semibold text-[var(--text-primary)]">{formatCents(value)}</p>
+            )}
         </div>
     );
 }
@@ -43,8 +63,19 @@ export default function CategoryChartTile({ accountId, accountName, window }: Pr
         queryFn: () => getCategoryChart(accountId, window),
     });
 
+    const chartData: CategoryChartEntry[] = data.length >= 7
+        ? [
+            ...data.slice(0, TOP_N),
+            {
+                category: 'Other',
+                total_cents: data.slice(TOP_N).reduce((sum, item) => sum + item.total_cents, 0),
+                breakdown: data.slice(TOP_N),
+            },
+        ]
+        : data;
+
     const barHeight = 28;
-    const chartHeight = Math.max(data.length * barHeight + 20, 100); // +20 for axis margin; 100 minimum prevents collapse
+    const chartHeight = Math.max(chartData.length * barHeight + 20, 100); // +20 for axis margin; 100 minimum prevents collapse
 
     return (
         <Tile accountName={accountName} accountId={accountId}>
@@ -64,7 +95,7 @@ export default function CategoryChartTile({ accountId, accountName, window }: Pr
                 <div style={{ height: chartHeight }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart
-                            data={data}
+                            data={chartData}
                             layout="vertical"
                             margin={{ top: 0, right: 4, bottom: 0, left: 0 }}
                         >
@@ -86,7 +117,7 @@ export default function CategoryChartTile({ accountId, accountName, window }: Pr
                             />
                             <Tooltip content={(props) => <CustomTooltip {...props} />} cursor={{ fill: 'var(--cream)' }} />
                             <Bar dataKey="total_cents" radius={[0, 3, 3, 0]}>
-                                {data.map((_, i) => (
+                                {chartData.map((_, i) => (
                                     <Cell key={i} fill="var(--teak)" fillOpacity={1 - i * 0.07} />
                                 ))}
                             </Bar>
