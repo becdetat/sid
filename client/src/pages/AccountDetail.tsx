@@ -23,6 +23,7 @@ import BulkActionBar from '../components/BulkActionBar';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
+import DateFormatPickerDialog from '../components/DateFormatPickerDialog';
 import type { Transaction } from '../types/transaction';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
@@ -34,6 +35,8 @@ type Modal =
     | { type: 'delete-scope'; transaction: Transaction }
     | { type: 'delete'; transaction: Transaction }
     | { type: 'bulk-delete' }
+    | { type: 'date-format-picker'; file: File }
+    | { type: 'import-errors'; errors: { row: number; error: string }[] }
     | null;
 
 interface AccountDetailLocationState {
@@ -305,23 +308,37 @@ export default function AccountDetail() {
         }
     }
 
+    async function runImport(file: File, dateFormat?: 'MDY' | 'DMY') {
+        setIsImporting(true);
+        try {
+            const { imported } = await importTransactions(accountId, file, dateFormat);
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            toast.success(`${imported} ${imported === 1 ? 'transaction' : 'transactions'} imported.`);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const data = err.response?.data as Record<string, unknown> | undefined;
+                if (data?.code === 'ambiguous_date_format') {
+                    setModal({ type: 'date-format-picker', file });
+                    return;
+                }
+                if (Array.isArray(data?.errors)) {
+                    setModal({ type: 'import-errors', errors: data.errors as { row: number; error: string }[] });
+                    return;
+                }
+                toast.error((data?.error as string | undefined) ?? 'Failed to import transactions.');
+            } else {
+                toast.error('Failed to import transactions.');
+            }
+        } finally {
+            setIsImporting(false);
+        }
+    }
+
     async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
         e.target.value = '';
-        setIsImporting(true);
-        try {
-            const { imported } = await importTransactions(accountId, file);
-            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
-            toast.success(`${imported} ${imported === 1 ? 'transaction' : 'transactions'} imported.`);
-        } catch (err: unknown) {
-            const message = axios.isAxiosError<{ error?: string }>(err)
-                ? err.response?.data?.error ?? 'Failed to import transactions.'
-                : 'Failed to import transactions.';
-            toast.error(message);
-        } finally {
-            setIsImporting(false);
-        }
+        await runImport(file);
     }
 
     if (accountLoading) {
@@ -596,6 +613,39 @@ export default function AccountDetail() {
                     onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
                     onCancel={() => setModal(null)}
                 />
+            )}
+            {modal?.type === 'date-format-picker' && (
+                <DateFormatPickerDialog
+                    onSelect={(format) => {
+                        const file = modal.file;
+                        setModal(null);
+                        runImport(file, format);
+                    }}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'import-errors' && (
+                <div className="sid-modal-overlay anim-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
+                    <div className="sid-modal anim-slide-up">
+                        <div className="sid-modal-trim" />
+                        <div className="sid-modal-body">
+                            <h2 className="font-display text-lg font-bold text-[var(--teak-dark)] mb-3">
+                                Import failed
+                            </h2>
+                            <p className="text-sm text-[var(--text-secondary)] mb-4">
+                                The following errors were found. No transactions were imported.
+                            </p>
+                            <ul className="max-h-64 overflow-y-auto text-xs font-body space-y-1 mb-6 pr-1">
+                                {modal.errors.map((e, i) => (
+                                    <li key={i} className="text-[var(--red)]">{e.error}</li>
+                                ))}
+                            </ul>
+                            <div className="flex justify-end">
+                                <button className="sid-btn sid-btn-ghost" onClick={() => setModal(null)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </Page>
     );

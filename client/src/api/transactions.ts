@@ -95,9 +95,11 @@ export async function bulkExportTransactions(accountId: number, ids: number[]): 
 export async function importTransactions(
     accountId: number,
     file: File,
+    dateFormat?: 'MDY' | 'DMY',
 ): Promise<{ imported: number }> {
     const form = new FormData();
     form.append('file', file);
+    if (dateFormat) form.append('dateFormat', dateFormat);
     const { data } = await axios.post<{ imported: number }>(`${base(accountId)}/import`, form);
     return data;
 }

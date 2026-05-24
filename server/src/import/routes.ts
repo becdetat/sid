@@ -4,7 +4,7 @@ import db from '../db';
 import { findById as findAccount } from '../accounts/repository';
 import { create } from '../transactions/repository';
 import { parseImportCSV } from './csv';
-import type { ImportRow } from './csv';
+import type { ImportRow, DateFormat } from './csv';
 
 const router = Router({ mergeParams: true });
 const upload = multer({ storage: multer.memoryStorage() });
@@ -33,10 +33,24 @@ router.post('/', upload.single('file'), (req, res) => {
         return;
     }
 
-    const result = parseImportCSV(file.buffer);
+    const rawDateFormat = (req.body as Record<string, unknown>).dateFormat;
+    let dateFormat: DateFormat | undefined;
+    if (rawDateFormat === 'MDY' || rawDateFormat === 'DMY') {
+        dateFormat = rawDateFormat;
+    } else if (rawDateFormat !== undefined && rawDateFormat !== '') {
+        res.status(400).json({ error: "dateFormat must be 'MDY' or 'DMY'" });
+        return;
+    }
 
-    if ('error' in result) {
-        res.status(422).json({ error: result.error });
+    const result = parseImportCSV(file.buffer, dateFormat);
+
+    if ('ambiguousDateFormat' in result) {
+        res.status(422).json({ code: 'ambiguous_date_format' });
+        return;
+    }
+
+    if ('errors' in result) {
+        res.status(422).json({ errors: result.errors });
         return;
     }
 
@@ -44,7 +58,7 @@ router.post('/', upload.single('file'), (req, res) => {
         for (const row of rows) {
             create({
                 account_id: accountId,
-                category: row.category ?? undefined,
+                category: row.category,
                 description: row.description,
                 amount: row.amount,
                 type: row.type,
