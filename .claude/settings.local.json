@@ -11,7 +11,8 @@
       "Bash(Get-ChildItem -Path \"d:\\\\development\\\\tanby-dynamics\\\\sid\" -Recurse -Directory -Depth 3)",
       "Bash(Select-Object -First 50)",
       "Bash(Format-Table FullName)",
-      "PowerShell(Get-ChildItem -Path \"d:\\\\development\\\\tanby-dynamics\\\\sid\" -Recurse -Directory -Force | Where-Object { $_.Name -in @\\('src', 'server', 'client', 'components', 'pages', 'api', 'lib', 'db', 'migrations'\\) } | Select-Object -First 20)"
+      "PowerShell(Get-ChildItem -Path \"d:\\\\development\\\\tanby-dynamics\\\\sid\" -Recurse -Directory -Force | Where-Object { $_.Name -in @\\('src', 'server', 'client', 'components', 'pages', 'api', 'lib', 'db', 'migrations'\\) } | Select-Object -First 20)",
+      "Bash(Get-ChildItem -Path \"d:\\\\development\\\\tanby-dynamics\\\\sid\\\\client\\\\src\" -Directory)"
     ]
   }
 }

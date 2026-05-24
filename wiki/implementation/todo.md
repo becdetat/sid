@@ -1,15 +1,6 @@
 # TODO
 
-- [x] Default the transaction "date" field to today when creating a transaction
-- [x] Add a button to create a transaction in an account directly in the dashboard account card
-- [x] Put account detail actions (download template, import CSV, export CSV) into a dropdown button
-- [x] Make filters a collapsible section, collapsed by default
-- [x] Navigating to an account from "All accounts", the link "Back to dashboard" should be replaced by "Back to all accounts"
-- [x] Show duration for charts (e.g. "Showing last 3 months")
-- [x] Income vs. expense tile by month (grouped bar chart)
 - [ ] Move dashboard configuration into dashboard itself - remove Settings -> Dashboard
-- [x] Bulk transaction operations
-- [x] Budget limits per category
-- [x] Go through the codebase and add comments where they would add meaningful value to the code. Don't add comments for sections that are self-evident.
-- [x] Recurring transactions
-- [x] [Make description optional, make category required and use category as fallback for display](https://github.com/tanby-dynamics/sid/issues/28)
+
+
+
