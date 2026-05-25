@@ -22,11 +22,13 @@ import type { DashboardAccount } from '../types/dashboard';
 type Modal =
     | { type: 'create' }
     | { type: 'add-transaction'; account: DashboardAccount }
+    | { type: 'add-transaction-global' }
     | null;
 
 export default function Dashboard() {
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
+    const [lastGlobalAccountId, setLastGlobalAccountId] = useState<number | undefined>(undefined);
 
     const { data: tileConfig = [], isLoading: configLoading } = useQuery({
         queryKey: ['dashboard-config'],
@@ -80,6 +82,27 @@ export default function Dashboard() {
         toast.success('Transaction added.');
     }
 
+    async function handleAddTransactionGlobal(data: Parameters<typeof handleAddTransaction>[0] & { account_id?: number }, pendingFiles: File[]) {
+        if (modal?.type !== 'add-transaction-global' || !data.account_id) return;
+        const accountId = data.account_id;
+        const tx = await addTransactionMutation.mutateAsync({ accountId, data });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
+        if (pendingFiles.length > 0) {
+            try {
+                await uploadAttachments(tx.id, pendingFiles);
+            } catch {
+                setLastGlobalAccountId(accountId);
+                setModal(null);
+                toast.warning('Transaction saved, but some attachments failed to upload.');
+                return;
+            }
+        }
+        setLastGlobalAccountId(accountId);
+        setModal(null);
+        toast.success('Transaction added.');
+    }
+
     const noAccountsInSystem = !configLoading && allAccountsWithBalances.length === 0;
     const tilesExistButNoneConfigured = !configLoading && allAccountsWithBalances.length > 0 && tileConfig.length === 0;
 
@@ -115,7 +138,12 @@ export default function Dashboard() {
 
             {!configLoading && tileConfig.length > 0 && (
                 <>
-                    <PageLink to="/accounts">All accounts → </PageLink>
+                    <div className="flex justify-between items-center mb-2">
+                        <PageLink to="/accounts">All accounts → </PageLink>
+                        <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'add-transaction-global' })}>
+                            New transaction
+                        </button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
                         {tileConfig.map((tile) => {
                             if (tile.tile_type === 'transactions') {
@@ -191,6 +219,14 @@ export default function Dashboard() {
             {modal?.type === 'add-transaction' && (
                 <TransactionForm
                     onSubmit={handleAddTransaction}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'add-transaction-global' && (
+                <TransactionForm
+                    accounts={allAccountsWithBalances}
+                    initialAccountId={lastGlobalAccountId}
+                    onSubmit={handleAddTransactionGlobal}
                     onCancel={() => setModal(null)}
                 />
             )}

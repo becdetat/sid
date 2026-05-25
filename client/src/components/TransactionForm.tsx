@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Transaction, RecurrenceFrequency } from '../types/transaction';
+import type { AccountWithBalance } from '../types/account';
 import { getCategories } from '../api/categories';
 import AttachmentManager from './AttachmentManager';
 import ConfirmDialog from './ConfirmDialog';
@@ -15,15 +16,19 @@ interface TransactionData {
     notes: string | null;
     recurrence?: RecurrenceFrequency | null;
     recurrence_end_date?: string | null;
+    account_id?: number;
 }
 
 interface Props {
     initial?: Transaction;
+    accounts?: AccountWithBalance[];
+    initialAccountId?: number;
     onSubmit: (data: TransactionData, pendingFiles: File[]) => void;
     onCancel: () => void;
 }
 
 interface FormErrors {
+    account?: string;
     category?: string;
     amount?: string;
     date?: string;
@@ -42,8 +47,9 @@ function centsToDisplay(cents: number): string {
     return (Math.abs(cents) / 100).toFixed(2);
 }
 
-export default function TransactionForm({ initial, onSubmit, onCancel }: Props) {
+export default function TransactionForm({ initial, accounts, initialAccountId, onSubmit, onCancel }: Props) {
     const isGenerated = !!initial?.recurrence_source_id;
+    const [selectedAccountId, setSelectedAccountId] = useState<string>(initialAccountId ? String(initialAccountId) : '');
     const [type, setType] = useState<'income' | 'expense'>(initial?.type ?? 'expense');
     const [category, setCategory] = useState(initial?.category ?? '');
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -118,6 +124,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
 
     function validate(): boolean {
         const next: FormErrors = {};
+        if (accounts && !selectedAccountId) next.account = 'Please select an account.';
         if (!category.trim()) next.category = 'Category is required.';
         const parsed = parseFloat(amount);
         if (!amount || isNaN(parsed) || parsed <= 0) next.amount = 'Enter a positive amount.';
@@ -143,6 +150,7 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                 notes: notes.trim() || null,
                 recurrence: repeat ? recurrence : null,
                 recurrence_end_date: repeat && recurrenceEndDate ? recurrenceEndDate : null,
+                ...(accounts && selectedAccountId ? { account_id: parseInt(selectedAccountId) } : {}),
             },
             pendingFiles,
         );
@@ -158,6 +166,24 @@ export default function TransactionForm({ initial, onSubmit, onCancel }: Props) 
                         {initial ? 'Edit transaction' : 'New transaction'}
                     </h2>
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        {/* Account selector — only shown when opened from dashboard */}
+                        {accounts && (
+                            <div className="flex flex-col gap-[5px]">
+                                <label className="sid-label">Account</label>
+                                <select
+                                    className="sid-input"
+                                    value={selectedAccountId}
+                                    onChange={(e) => { setSelectedAccountId(e.target.value); setErrors((p) => ({ ...p, account: undefined })); }}
+                                >
+                                    <option value="">Select account…</option>
+                                    {accounts.map((a) => (
+                                        <option key={a.id} value={String(a.id)}>{a.name}</option>
+                                    ))}
+                                </select>
+                                {errors.account && <span className="text-xs text-[var(--red)]">{errors.account}</span>}
+                            </div>
+                        )}
+
                         {/* Type toggle */}
                         <div className="flex rounded-[var(--radius-input)] overflow-hidden [border:1.5px_solid_var(--border)] bg-[var(--cream)]">
                             {(['expense', 'income'] as const).map((t) => (
