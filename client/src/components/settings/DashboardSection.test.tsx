@@ -10,6 +10,7 @@ vi.mock('../../api/dashboardConfig', () => ({
     addToDashboard: vi.fn(),
     removeFromDashboard: vi.fn(),
     reorderDashboard: vi.fn(),
+    updateShowBalance: vi.fn(),
 }));
 
 vi.mock('../../api/accounts', () => ({
@@ -20,9 +21,9 @@ import * as dashboardConfigApi from '../../api/dashboardConfig';
 import * as accountsApi from '../../api/accounts';
 
 const mockConfig: DashboardConfigItem[] = [
-    { id: 1, account_id: 10, position: 1, tile_type: 'transactions', time_window: null },
-    { id: 2, account_id: 20, position: 2, tile_type: 'transactions', time_window: null },
-    { id: 3, account_id: 30, position: 3, tile_type: 'transactions', time_window: null },
+    { id: 1, account_id: 10, position: 1, tile_type: 'transactions', time_window: null, show_balance: true, balance_cents: 10000 },
+    { id: 2, account_id: 20, position: 2, tile_type: 'transactions', time_window: null, show_balance: true, balance_cents: 20000 },
+    { id: 3, account_id: 30, position: 3, tile_type: 'transactions', time_window: null, show_balance: false, balance_cents: 30000 },
 ];
 
 const mockAccounts: Account[] = [
@@ -48,8 +49,9 @@ beforeEach(() => {
     vi.mocked(dashboardConfigApi.reorderDashboard).mockResolvedValue(undefined);
     vi.mocked(dashboardConfigApi.removeFromDashboard).mockResolvedValue(undefined);
     vi.mocked(dashboardConfigApi.addToDashboard).mockResolvedValue({
-        id: 4, account_id: 40, position: 4, tile_type: 'transactions', time_window: null,
+        id: 4, account_id: 40, position: 4, tile_type: 'transactions', time_window: null, show_balance: false, balance_cents: 0,
     });
+    vi.mocked(dashboardConfigApi.updateShowBalance).mockResolvedValue(undefined);
 });
 
 describe('DashboardSection', () => {
@@ -64,8 +66,8 @@ describe('DashboardSection', () => {
 
     it('shows tile type suffix for chart tiles', async () => {
         vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([
-            { id: 1, account_id: 10, position: 1, tile_type: 'balance_over_time', time_window: '30d' },
-            { id: 2, account_id: 20, position: 2, tile_type: 'totals_by_category', time_window: '3m' },
+            { id: 1, account_id: 10, position: 1, tile_type: 'balance_over_time', time_window: '30d', show_balance: false, balance_cents: null },
+            { id: 2, account_id: 20, position: 2, tile_type: 'totals_by_category', time_window: '3m', show_balance: false, balance_cents: null },
         ]);
         renderSection();
         await waitFor(() => {
@@ -246,5 +248,51 @@ describe('DashboardSection', () => {
         vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([]);
         renderSection();
         await waitFor(() => screen.getByText(/no tiles are configured/i));
+    });
+
+    it('shows show balance checkboxes for transactions tiles', async () => {
+        renderSection();
+        await waitFor(() => screen.getAllByRole('checkbox', { name: /show balance/i }));
+        const checkboxes = screen.getAllByRole('checkbox', { name: /show balance/i });
+        expect(checkboxes).toHaveLength(3);
+    });
+
+    it('checks show balance checkbox when show_balance is true', async () => {
+        renderSection();
+        await waitFor(() => screen.getAllByRole('checkbox', { name: /show balance/i }));
+        const checkboxes = screen.getAllByRole('checkbox', { name: /show balance/i }) as HTMLInputElement[];
+        expect(checkboxes[0].checked).toBe(true);
+        expect(checkboxes[1].checked).toBe(true);
+        expect(checkboxes[2].checked).toBe(false);
+    });
+
+    it('shows show balance checkbox for balance_over_time tiles', async () => {
+        vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([
+            { id: 1, account_id: 10, position: 1, tile_type: 'balance_over_time', time_window: '30d', show_balance: false, balance_cents: 5000 },
+        ]);
+        renderSection();
+        await waitFor(() => screen.getByRole('checkbox', { name: /show balance/i }));
+        expect(screen.getByRole('checkbox', { name: /show balance/i })).toBeTruthy();
+    });
+
+    it('does not show show balance checkbox for ineligible tile types', async () => {
+        vi.mocked(dashboardConfigApi.getDashboardConfig).mockResolvedValue([
+            { id: 1, account_id: 10, position: 1, tile_type: 'totals_by_category', time_window: '30d', show_balance: false, balance_cents: null },
+            { id: 2, account_id: 20, position: 2, tile_type: 'income_vs_expense', time_window: '3m', show_balance: false, balance_cents: null },
+            { id: 3, account_id: 30, position: 3, tile_type: 'budget_progress', time_window: null, show_balance: false, balance_cents: null },
+        ]);
+        renderSection();
+        await waitFor(() => screen.getAllByRole('button', { name: /move .* up/i }));
+        expect(screen.queryByRole('checkbox', { name: /show balance/i })).toBeNull();
+    });
+
+    it('calls updateShowBalance when show balance checkbox is toggled', async () => {
+        renderSection();
+        await waitFor(() => screen.getAllByRole('checkbox', { name: /show balance/i }));
+        const checkboxes = screen.getAllByRole('checkbox', { name: /show balance/i });
+        fireEvent.click(checkboxes[2]); // toggle the unchecked one
+        await waitFor(() => {
+            expect(dashboardConfigApi.updateShowBalance).toHaveBeenCalledWith(3, true);
+        });
     });
 });

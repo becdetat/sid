@@ -125,6 +125,7 @@ export default function Dashboard() {
                                     <AccountTile
                                         key={tile.id}
                                         account={account}
+                                        showBalance={tile.show_balance}
                                         onAddTransaction={(a) => setModal({ type: 'add-transaction', account: a })}
                                     />
                                 );
@@ -137,6 +138,8 @@ export default function Dashboard() {
                                         accountId={tile.account_id}
                                         accountName={account?.name ?? `Account ${tile.account_id}`}
                                         window={tile.time_window ?? '30d'}
+                                        showBalance={tile.show_balance}
+                                        balanceCents={tile.balance_cents}
                                     />
                                 );
                             }

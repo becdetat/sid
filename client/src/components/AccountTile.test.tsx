@@ -11,11 +11,12 @@ const account: DashboardAccount = {
     recent_transactions: [],
 };
 
-function renderTile(onAddTransaction = vi.fn()) {
+function renderTile(showBalance = true, onAddTransaction = vi.fn()) {
     return render(
         <MemoryRouter>
             <AccountTile
                 account={account}
+                showBalance={showBalance}
                 onAddTransaction={onAddTransaction}
             />
         </MemoryRouter>,
@@ -34,10 +35,15 @@ describe('AccountTile', () => {
         expect(screen.queryByRole('button', { name: /delete office/i })).toBeNull();
     });
 
-    it('shows balance colour-coded red for negative', () => {
-        renderTile();
-        const el = screen.getByText('\u2212$150.00');
+    it('shows balance colour-coded red for negative when showBalance is true', () => {
+        renderTile(true);
+        const el = screen.getByText('−$150.00');
         expect(el.style.color).toBe('var(--red)');
+    });
+
+    it('hides balance when showBalance is false', () => {
+        renderTile(false);
+        expect(screen.queryByText('−$150.00')).toBeNull();
     });
 
     it('shows "No transactions yet" when recent_transactions is empty', () => {
@@ -47,7 +53,7 @@ describe('AccountTile', () => {
 
     it('calls onAddTransaction when add transaction button is clicked', () => {
         const onAddTransaction = vi.fn();
-        renderTile(onAddTransaction);
+        renderTile(true, onAddTransaction);
         fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
         expect(onAddTransaction).toHaveBeenCalledWith(account);
     });

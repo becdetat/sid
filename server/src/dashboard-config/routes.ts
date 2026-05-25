@@ -1,12 +1,11 @@
 import { Router } from 'express';
 import * as repo from './repository';
 import * as accountRepo from '../accounts/repository';
-import type { TileType } from './repository';
+import type { TileType, DashboardConfigItem } from './repository';
 
 const router = Router();
 
 const VALID_TILE_TYPES: TileType[] = ['transactions', 'balance_over_time', 'totals_by_category', 'income_vs_expense', 'budget_progress'];
-const VALID_WINDOWS = /^(\d+[dw]|[0-9]+m|all)$/;
 
 function isValidWindow(w: string): boolean {
     if (w === 'all') return true;
@@ -19,8 +18,12 @@ function isValidWindow(w: string): boolean {
     return false;
 }
 
+function toClientItem(item: DashboardConfigItem) {
+    return { ...item, show_balance: item.show_balance === 1 };
+}
+
 router.get('/', (_req, res) => {
-    res.json({ items: repo.getAll() });
+    res.json({ items: repo.getAll().map(toClientItem) });
 });
 
 router.post('/:accountId', (req, res) => {
@@ -48,7 +51,22 @@ router.post('/:accountId', (req, res) => {
         }
     }
     const item = repo.add(accountId, tileType, needsWindow ? time_window : undefined);
-    res.status(201).json(item);
+    res.status(201).json(toClientItem(item));
+});
+
+router.patch('/:id', (req, res) => {
+    const tileId = parseInt(req.params.id, 10);
+    const { show_balance } = req.body as { show_balance?: unknown };
+    if (typeof show_balance !== 'boolean') {
+        res.status(400).json({ error: 'show_balance must be a boolean' });
+        return;
+    }
+    const updated = repo.updateShowBalance(tileId, show_balance);
+    if (!updated) {
+        res.status(404).json({ error: 'tile not found' });
+        return;
+    }
+    res.status(204).send();
 });
 
 router.delete('/:id', (req, res) => {
@@ -75,7 +93,7 @@ router.put('/order', (req, res) => {
         return;
     }
     repo.reorder(tile_ids);
-    res.json({ items: repo.getAll() });
+    res.json({ items: repo.getAll().map(toClientItem) });
 });
 
 export default router;

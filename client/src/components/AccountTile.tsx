@@ -5,19 +5,22 @@ import { Tile } from './Tile';
 
 interface Props {
     account: DashboardAccount;
+    showBalance: boolean;
     onAddTransaction: (account: DashboardAccount) => void;
 }
 
-export default function AccountTile({ account, onAddTransaction }: Props) {
+export default function AccountTile({ account, showBalance, onAddTransaction }: Props) {
     return (
         <Tile accountName={account.name} accountId={account.id}>
             {/* Balance */}
-            <div
-                className="font-display text-[28px] font-bold mb-[14px] tracking-[-0.02em]"
-                style={{ color: balanceColor(account.balance_cents) }}
-            >
-                {formatCents(account.balance_cents)}
-            </div>
+            {showBalance && (
+                <div
+                    className="font-display text-[28px] font-bold mb-[14px] tracking-[-0.02em]"
+                    style={{ color: balanceColor(account.balance_cents) }}
+                >
+                    {formatCents(account.balance_cents)}
+                </div>
+            )}
 
             {/* Recent transactions */}
             {account.recent_transactions.length === 0 ? (

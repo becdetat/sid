@@ -10,13 +10,19 @@ vi.mock('../api/charts', () => ({
 
 import * as chartsApi from '../api/charts';
 
-function renderTile(window: string) {
+function renderTile(window: string, showBalance = false, balanceCents: number | null = null) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
         <QueryClientProvider client={client}>
             <MemoryRouter>
-                <BalanceChartTile accountId={1} accountName="Savings" window={window} />
+                <BalanceChartTile
+                    accountId={1}
+                    accountName="Savings"
+                    window={window}
+                    showBalance={showBalance}
+                    balanceCents={balanceCents}
+                />
             </MemoryRouter>
         </QueryClientProvider>,
     );
@@ -41,6 +47,30 @@ describe('BalanceChartTile', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Last 6 weeks')).toBeTruthy();
+        });
+    });
+
+    it('does not show balance when showBalance is false', async () => {
+        renderTile('3m', false, 50000);
+
+        await waitFor(() => {
+            expect(screen.queryByText('+$500.00')).toBeNull();
+        });
+    });
+
+    it('shows balance when showBalance is true and balanceCents is set', async () => {
+        renderTile('3m', true, 50000);
+
+        await waitFor(() => {
+            expect(screen.getByText('+$500.00')).toBeTruthy();
+        });
+    });
+
+    it('does not show balance when showBalance is true but balanceCents is null', async () => {
+        renderTile('3m', true, null);
+
+        await waitFor(() => {
+            expect(screen.queryByText(/\$/)).toBeNull();
         });
     });
 });

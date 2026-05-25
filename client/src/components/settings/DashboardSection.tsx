@@ -6,6 +6,7 @@ import {
     addToDashboard,
     removeFromDashboard,
     reorderDashboard,
+    updateShowBalance,
     type TileType,
     type DashboardConfigItem,
 } from '../../api/dashboardConfig';
@@ -99,6 +100,13 @@ export default function DashboardSection() {
         onError: () => toast.error('Failed to remove tile from dashboard.'),
     });
 
+    const showBalanceMutation = useMutation({
+        mutationFn: ({ tileId, showBalance }: { tileId: number; showBalance: boolean }) =>
+            updateShowBalance(tileId, showBalance),
+        onSuccess: invalidate,
+        onError: () => toast.error('Failed to update show balance setting.'),
+    });
+
     const addMutation = useMutation({
         mutationFn: ({ accountId, tileType, timeWindow }: { accountId: number; tileType: TileType; timeWindow?: string }) =>
             addToDashboard(accountId, tileType, timeWindow),
@@ -175,6 +183,9 @@ export default function DashboardSection() {
                             <th className="text-left px-3 pt-2 pb-[10px] text-[11px] font-bold tracking-[0.06em] text-[var(--text-muted)] uppercase font-body">
                                 Tile
                             </th>
+                            <th className="text-left px-3 pt-2 pb-[10px] text-[11px] font-bold tracking-[0.06em] text-[var(--text-muted)] uppercase font-body whitespace-nowrap">
+                                Show balance
+                            </th>
                             <th className="w-[100px]" />
                         </tr>
                     </thead>
@@ -183,10 +194,21 @@ export default function DashboardSection() {
                             const account = allAccounts.find((a) => a.id === item.account_id);
                             const name = account?.name ?? `Account ${item.account_id}`;
                             const label = tileLabel(item, name);
+                            const supportsBalance = item.tile_type === 'transactions' || item.tile_type === 'balance_over_time';
                             return (
                                 <tr key={item.id} className="border-b border-[var(--cream-mid)]">
                                     <td className="p-3 text-sm font-semibold text-[var(--text-primary)] font-body">
                                         {label}
+                                    </td>
+                                    <td className="p-3">
+                                        {supportsBalance && (
+                                            <input
+                                                type="checkbox"
+                                                aria-label={`Show balance for ${label}`}
+                                                checked={item.show_balance}
+                                                onChange={(e) => showBalanceMutation.mutate({ tileId: item.id, showBalance: e.target.checked })}
+                                            />
+                                        )}
                                     </td>
                                     <td className="p-3 pl-0">
                                         <div className="flex gap-0.5 justify-end">

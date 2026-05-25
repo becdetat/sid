@@ -110,6 +110,13 @@ db.exec(`
     );
 `);
 
+try {
+    db.exec(`ALTER TABLE dashboard_config ADD COLUMN show_balance INTEGER NOT NULL DEFAULT 0`);
+    db.exec(`UPDATE dashboard_config SET show_balance = 1 WHERE tile_type = 'transactions'`);
+} catch {
+    // column already exists
+}
+
 // Backfill: transactions with no category get description copied to category
 db.exec(`UPDATE transactions SET category = description WHERE category IS NULL OR category = ''`);
 

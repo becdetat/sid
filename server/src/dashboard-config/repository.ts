@@ -8,11 +8,22 @@ export interface DashboardConfigItem {
     position: number;
     tile_type: TileType;
     time_window: string | null;
+    show_balance: number; // 0 or 1
+    balance_cents: number | null;
 }
+
+const SELECT_SQL = `
+    SELECT dc.id, dc.account_id, dc.position, dc.tile_type, dc.time_window, dc.show_balance,
+        CASE WHEN dc.tile_type IN ('transactions', 'balance_over_time')
+            THEN (SELECT COALESCE(SUM(t.amount_cents), 0) FROM transactions t WHERE t.account_id = dc.account_id AND t.deleted_at IS NULL)
+            ELSE NULL
+        END AS balance_cents
+    FROM dashboard_config dc
+`;
 
 export function getAll(): DashboardConfigItem[] {
     return db
-        .prepare('SELECT id, account_id, position, tile_type, time_window FROM dashboard_config ORDER BY position')
+        .prepare(`${SELECT_SQL} ORDER BY dc.position`)
         .all() as DashboardConfigItem[];
 }
 
@@ -22,10 +33,10 @@ export function add(accountId: number, tileType: TileType, timeWindow?: string):
         .get() as { max_pos: number };
     const nextPos = maxRow.max_pos + 1;
     const result = db
-        .prepare('INSERT INTO dashboard_config (account_id, position, tile_type, time_window) VALUES (?, ?, ?, ?)')
+        .prepare('INSERT INTO dashboard_config (account_id, position, tile_type, time_window, show_balance) VALUES (?, ?, ?, ?, 0)')
         .run(accountId, nextPos, tileType, timeWindow ?? null);
     return db
-        .prepare('SELECT id, account_id, position, tile_type, time_window FROM dashboard_config WHERE id = ?')
+        .prepare(`${SELECT_SQL} WHERE dc.id = ?`)
         .get(result.lastInsertRowid) as DashboardConfigItem;
 }
 
@@ -42,4 +53,11 @@ export function reorder(tileIds: number[]): void {
         ids.forEach((id, index) => update.run(index + 1, id));
     });
     run(tileIds);
+}
+
+export function updateShowBalance(tileId: number, showBalance: boolean): boolean {
+    const result = db
+        .prepare('UPDATE dashboard_config SET show_balance = ? WHERE id = ?')
+        .run(showBalance ? 1 : 0, tileId);
+    return result.changes > 0;
 }

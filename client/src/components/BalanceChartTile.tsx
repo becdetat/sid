@@ -10,13 +10,15 @@ import {
 } from 'recharts';
 import { getBalanceChart } from '../api/charts';
 import { formatChartWindow } from '../utils/chartWindow';
-import { formatCents, formatDate } from '../utils/format';
+import { formatCents, formatDate, balanceColor } from '../utils/format';
 import { Tile } from './Tile';
 
 interface Props {
     accountId: number;
     accountName: string;
     window: string;
+    showBalance: boolean;
+    balanceCents: number | null;
 }
 
 function formatYAxis(value: number): string {
@@ -37,7 +39,7 @@ function CustomTooltip({ active, payload, label }: TooltipContentProps) {
     );
 }
 
-export default function BalanceChartTile({ accountId, accountName, window }: Props) {
+export default function BalanceChartTile({ accountId, accountName, window, showBalance, balanceCents }: Props) {
     const { data = [], isLoading } = useQuery({
         queryKey: ['chart-balance', accountId, window],
         queryFn: () => getBalanceChart(accountId, window),
@@ -46,6 +48,15 @@ export default function BalanceChartTile({ accountId, accountName, window }: Pro
 
     return (
         <Tile accountName={accountName} accountId={accountId}>
+            {showBalance && balanceCents !== null && (
+                <div
+                    className="font-display text-[28px] font-bold mb-[14px] tracking-[-0.02em]"
+                    style={{ color: balanceColor(balanceCents) }}
+                >
+                    {formatCents(balanceCents)}
+                </div>
+            )}
+
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)] font-body">
                 {windowLabel}
             </p>
