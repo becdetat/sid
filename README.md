@@ -78,7 +78,7 @@ docker compose up -d
 
 The app will be available at `http://localhost:3000`.
 
-## Releasing a new version
+## Releasing a new version (maintainers)
 
 Pushing a Git tag triggers the GitHub Actions workflow, which builds and publishes multi-platform Docker images (`linux/amd64`, `linux/arm64`) to GHCR.
 
