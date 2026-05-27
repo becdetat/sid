@@ -1,5 +1,5 @@
 import db from '../db';
-import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, ImportResult } from './types';
+import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, ImportResult } from './types';
 
 function formatTimestamp(d: Date): string {
     const p = (n: number) => String(n).padStart(2, '0');
@@ -20,13 +20,16 @@ export function exportAll(): BackupPayload {
 
     const budgets = db.prepare(`SELECT id, account_id, category, amount_cents, period, warning_threshold, danger_threshold, created_at, deleted_at FROM budgets ORDER BY id`).all() as BackupBudget[];
 
+    const saved_views = db.prepare(`SELECT id, scope, account_id, name, filters, is_default, position, created_at, deleted_at FROM saved_views ORDER BY id`).all() as BackupSavedView[];
+
     return {
-        version: 2,
+        version: 3,
         exported_at: new Date().toISOString(),
         accounts,
         transactions,
         attachments,
         budgets,
+        saved_views,
     };
 }
 
@@ -106,11 +109,52 @@ export function importMerge(payload: BackupPayload): ImportResult {
             }
         }
 
+        let savedViewsImported = 0;
+        if (Array.isArray(p.saved_views)) {
+            const upsertView = db.prepare(
+                `INSERT INTO saved_views (scope, account_id, name, filters, is_default, position, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(scope, COALESCE(account_id, -1), LOWER(name))
+                   WHERE deleted_at IS NULL
+                   DO UPDATE SET
+                     filters = excluded.filters,
+                     is_default = excluded.is_default,
+                     position = excluded.position`,
+            );
+            const clearDefaultAcct = db.prepare(
+                `UPDATE saved_views SET is_default = 0
+                 WHERE scope = ? AND account_id = ? AND is_default = 1 AND deleted_at IS NULL`,
+            );
+            const clearDefaultGlobal = db.prepare(
+                `UPDATE saved_views SET is_default = 0
+                 WHERE scope = ? AND account_id IS NULL AND is_default = 1 AND deleted_at IS NULL`,
+            );
+            for (const view of p.saved_views) {
+                let newAccountId: number | null = null;
+                if (view.scope === 'account') {
+                    if (view.account_id === null) continue;
+                    const mapped = accountIdMap.get(view.account_id);
+                    if (mapped === undefined) continue;
+                    newAccountId = mapped;
+                }
+                if (view.is_default === 1 && !view.deleted_at) {
+                    if (newAccountId === null) {
+                        clearDefaultGlobal.run(view.scope);
+                    } else {
+                        clearDefaultAcct.run(view.scope, newAccountId);
+                    }
+                }
+                upsertView.run(view.scope, newAccountId, view.name, view.filters, view.is_default, view.position, view.created_at, view.deleted_at);
+                savedViewsImported++;
+            }
+        }
+
         return {
             accounts: accountIdMap.size,
             transactions: transactionIdMap.size,
             attachments: p.attachments.filter((a) => transactionIdMap.has(a.transaction_id)).length,
             budgets: budgetsImported,
+            saved_views: savedViewsImported,
         };
     });
 
@@ -127,6 +171,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
         db.prepare(`DELETE FROM attachments`).run();
         db.prepare(`DELETE FROM transactions`).run();
         db.prepare(`DELETE FROM budgets`).run();
+        db.prepare(`DELETE FROM saved_views`).run();
         db.prepare(`DELETE FROM accounts`).run();
 
         for (const account of p.accounts) {
@@ -166,11 +211,24 @@ export function importWipe(payload: BackupPayload): ImportResult {
             }
         }
 
+        let savedViewsImported = 0;
+        if (Array.isArray(p.saved_views)) {
+            const insertView = db.prepare(
+                `INSERT INTO saved_views (id, scope, account_id, name, filters, is_default, position, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            );
+            for (const view of p.saved_views) {
+                insertView.run(view.id, view.scope, view.account_id, view.name, view.filters, view.is_default, view.position, view.created_at, view.deleted_at);
+                savedViewsImported++;
+            }
+        }
+
         return {
             accounts: p.accounts.length,
             transactions: p.transactions.length,
             attachments: p.attachments.length,
             budgets: budgetsImported,
+            saved_views: savedViewsImported,
         };
     });
 

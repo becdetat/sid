@@ -20,6 +20,8 @@ import { downloadImportTemplate } from '../utils/importTemplate';
 import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
 import BulkActionBar from '../components/BulkActionBar';
+import ViewsDropdown from '../components/ViewsDropdown';
+import { listSavedViews, sanitiseSavedFilters } from '../api/savedViews';
 import TransactionForm from '../components/TransactionForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
@@ -131,6 +133,8 @@ export default function AccountDetail() {
     const [amountMax, setAmountMax] = useState('');
     const [filterHasAttachment, setFilterHasAttachment] = useState<'yes' | 'no' | ''>('');
     const [filterRecurringOnly, setFilterRecurringOnly] = useState(false);
+    const [activeDefaultViewName, setActiveDefaultViewName] = useState<string | null>(null);
+    const defaultAppliedRef = useRef(false);
 
     const expandTxId = (() => {
         const v = new URLSearchParams(location.search).get('expand');
@@ -170,12 +174,47 @@ export default function AccountDetail() {
         setAmountMax('');
         setFilterHasAttachment('');
         setFilterRecurringOnly(false);
+        setActiveDefaultViewName(null);
+    }
+
+    function applySavedViewFilters(filters: TransactionFilters, defaultName: string | null = null) {
+        setKeyword(filters.keyword ?? '');
+        setDebouncedKeyword(filters.keyword ?? '');
+        setFilterFrom(filters.from ?? '');
+        setFilterTo(filters.to ?? '');
+        setFilterCategory(filters.category ?? '');
+        setFilterType(filters.type ?? '');
+        setAmountMin(filters.amountMin ?? '');
+        setAmountMax(filters.amountMax ?? '');
+        setFilterHasAttachment(filters.hasAttachment ?? '');
+        setFilterRecurringOnly(filters.recurringOnly ?? false);
+        setActiveDefaultViewName(defaultName);
     }
 
     const { data: account, isLoading: accountLoading } = useQuery({
         queryKey: ['accounts', accountId],
         queryFn: () => getAccount(accountId),
     });
+
+    const { data: savedViewsForAccount } = useQuery({
+        queryKey: ['saved-views', 'account', accountId],
+        queryFn: () => listSavedViews({ scope: 'account', accountId }),
+    });
+
+    // Apply the default saved view once, on first load — but only if the user hasn't
+    // already set filters (e.g. by arriving with ?expand=… or pressing back).
+    useEffect(() => {
+        if (defaultAppliedRef.current) return;
+        if (!savedViewsForAccount) return;
+        const def = savedViewsForAccount.find((v) => v.is_default);
+        defaultAppliedRef.current = true;
+        if (!def) return;
+        if (keyword || filterFrom || filterTo || filterCategory || filterType || amountMin || amountMax || filterHasAttachment || filterRecurringOnly) return;
+        // One-shot default-view application after the saved views load.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applySavedViewFilters(sanitiseSavedFilters(def.filters), def.name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [savedViewsForAccount]);
 
     const { data: transactions = [], isLoading: txLoading } = useQuery({
         queryKey: ['transactions', accountId, activeFilters],
@@ -393,25 +432,51 @@ export default function AccountDetail() {
 
             {/* Filter bar */}
             <div className="mb-5 bg-[var(--white)] rounded-2xl [border:1.5px_solid_var(--border)] shadow-[var(--shadow-sm)] overflow-hidden">
-                <button
-                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--cream)] transition-colors"
-                    onClick={() => setFiltersOpen((o) => !o)}
-                >
-                    <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] flex items-center gap-2">
-                        Filters
-                        {isFiltered && (
-                            <span className="inline-flex items-center justify-center bg-[var(--teak)] text-white rounded-full w-4 h-4 text-[9px] font-bold">
-                                {Object.values(activeFilters).filter(Boolean).length}
-                            </span>
-                        )}
-                    </span>
-                    <svg
-                        width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
-                        className={`text-[var(--text-muted)] transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`}
+                <div className="flex items-center justify-between gap-2 pr-3">
+                    <button
+                        className="flex-1 flex items-center justify-between text-left px-4 py-3 hover:bg-[var(--cream)] transition-colors min-w-0"
+                        onClick={() => setFiltersOpen((o) => !o)}
                     >
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                </button>
+                        <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] flex items-center gap-2">
+                            Filters
+                            {isFiltered && (
+                                <span className="inline-flex items-center justify-center bg-[var(--teak)] text-white rounded-full w-4 h-4 text-[9px] font-bold">
+                                    {Object.values(activeFilters).filter(Boolean).length}
+                                </span>
+                            )}
+                            {activeDefaultViewName && (
+                                <span className="inline-flex items-center gap-1 [border:1px_solid_var(--border)] rounded-full px-2 py-[1px] text-[10px] font-bold text-[var(--text-muted)] tracking-normal normal-case">
+                                    Default: {activeDefaultViewName}
+                                    <span
+                                        role="button"
+                                        aria-label="Clear default view for this session"
+                                        className="cursor-pointer hover:text-[var(--text)]"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            clearFilters();
+                                        }}
+                                    >
+                                        ×
+                                    </span>
+                                </span>
+                            )}
+                        </span>
+                        <svg
+                            width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
+                            className={`text-[var(--text-muted)] transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`}
+                        >
+                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                    <ViewsDropdown
+                        scope="account"
+                        accountId={accountId}
+                        currentFilters={activeFilters}
+                        isFiltered={isFiltered}
+                        onApply={(f) => applySavedViewFilters(f)}
+                        onClear={clearFilters}
+                    />
+                </div>
 
                 {filtersOpen && (
                     <div className="px-4 pb-4 pt-1 [border-top:1px_solid_var(--border)]">

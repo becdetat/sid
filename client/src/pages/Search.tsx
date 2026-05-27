@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -8,6 +8,8 @@ import {
 } from '../api/transactions';
 import { getCategories } from '../api/categories';
 import { Page } from '../components/Page';
+import ViewsDropdown from '../components/ViewsDropdown';
+import { listSavedViews, sanitiseSavedFilters } from '../api/savedViews';
 import { formatCents, formatDate, balanceColor } from '../utils/format';
 
 export default function Search() {
@@ -21,6 +23,8 @@ export default function Search() {
     const [amountMax, setAmountMax] = useState('');
     const [filterHasAttachment, setFilterHasAttachment] = useState<'yes' | 'no' | ''>('');
     const [filterRecurringOnly, setFilterRecurringOnly] = useState(false);
+    const [activeDefaultViewName, setActiveDefaultViewName] = useState<string | null>(null);
+    const defaultAppliedRef = useRef(false);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedKeyword(keyword), 300);
@@ -51,12 +55,43 @@ export default function Search() {
         setAmountMax('');
         setFilterHasAttachment('');
         setFilterRecurringOnly(false);
+        setActiveDefaultViewName(null);
+    }
+
+    function applySavedViewFilters(filters: TransactionFilters, defaultName: string | null = null) {
+        setKeyword(filters.keyword ?? '');
+        setDebouncedKeyword(filters.keyword ?? '');
+        setFilterFrom(filters.from ?? '');
+        setFilterTo(filters.to ?? '');
+        setFilterCategory(filters.category ?? '');
+        setFilterType(filters.type ?? '');
+        setAmountMin(filters.amountMin ?? '');
+        setAmountMax(filters.amountMax ?? '');
+        setFilterHasAttachment(filters.hasAttachment ?? '');
+        setFilterRecurringOnly(filters.recurringOnly ?? false);
+        setActiveDefaultViewName(defaultName);
     }
 
     const { data: categories = [] } = useQuery({
         queryKey: ['categories'],
         queryFn: getCategories,
     });
+
+    const { data: globalSavedViews } = useQuery({
+        queryKey: ['saved-views', 'global', null],
+        queryFn: () => listSavedViews({ scope: 'global' }),
+    });
+
+    useEffect(() => {
+        if (defaultAppliedRef.current) return;
+        if (!globalSavedViews) return;
+        const def = globalSavedViews.find((v) => v.is_default);
+        defaultAppliedRef.current = true;
+        if (!def) return;
+        // One-shot default-view application after the saved views load — setState here is intentional.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applySavedViewFilters(sanitiseSavedFilters(def.filters), def.name);
+    }, [globalSavedViews]);
 
     const { data: results = [], isLoading } = useQuery({
         queryKey: ['search-transactions', activeFilters],
@@ -78,6 +113,28 @@ export default function Search() {
 
     return (
         <Page pageTitle="Search">
+            <div className="flex items-center justify-end mb-3 gap-2">
+                {activeDefaultViewName && (
+                    <span className="inline-flex items-center gap-1 [border:1px_solid_var(--border)] rounded-full px-2 py-[1px] text-[10px] font-bold text-[var(--text-muted)]">
+                        Default: {activeDefaultViewName}
+                        <button
+                            aria-label="Clear default view for this session"
+                            className="cursor-pointer hover:text-[var(--text)] bg-transparent border-0 p-0 m-0 leading-none"
+                            onClick={clearFilters}
+                        >
+                            ×
+                        </button>
+                    </span>
+                )}
+                <ViewsDropdown
+                    scope="global"
+                    currentFilters={activeFilters}
+                    isFiltered={isFiltered}
+                    onApply={(f) => applySavedViewFilters(f)}
+                    onClear={clearFilters}
+                />
+            </div>
+
             <div className="mb-5 bg-[var(--white)] rounded-2xl [border:1.5px_solid_var(--border)] shadow-[var(--shadow-sm)] overflow-hidden">
                 <div className="px-4 pb-4 pt-4">
                     <div className="flex flex-wrap gap-3 items-end">

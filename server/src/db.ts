@@ -117,6 +117,28 @@ try {
     // column already exists
 }
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS saved_views (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        scope       TEXT NOT NULL CHECK(scope IN ('account', 'global')),
+        account_id  INTEGER REFERENCES accounts(id),
+        name        TEXT NOT NULL,
+        filters     TEXT NOT NULL,
+        is_default  INTEGER NOT NULL DEFAULT 0,
+        position    INTEGER NOT NULL DEFAULT 0,
+        created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+        deleted_at  DATETIME
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS saved_views_one_default_per_scope
+        ON saved_views(scope, COALESCE(account_id, -1))
+        WHERE is_default = 1 AND deleted_at IS NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS saved_views_unique_name_per_scope
+        ON saved_views(scope, COALESCE(account_id, -1), LOWER(name))
+        WHERE deleted_at IS NULL;
+`);
+
 // Backfill: transactions with no category get description copied to category
 db.exec(`UPDATE transactions SET category = description WHERE category IS NULL OR category = ''`);
 

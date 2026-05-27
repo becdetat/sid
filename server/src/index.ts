@@ -18,6 +18,7 @@ import backupExportRoutes from './backup/exportRoutes';
 import backupImportRoutes from './backup/importRoutes';
 import chartRoutes from './chart/routes';
 import budgetRoutes from './budgets/routes';
+import savedViewRoutes from './saved-views/routes';
 
 const app = express();
 const PORT = 3000;
@@ -30,6 +31,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/transactions/search', transactionSearchRoutes);
+app.use('/api/saved-views', savedViewRoutes);
 app.use('/api/backup', backupExportRoutes);
 app.use('/api/backup', backupImportRoutes);
 app.use('/api/dashboard', dashboardRoutes);

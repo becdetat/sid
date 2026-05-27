@@ -45,6 +45,18 @@ export interface BackupBudget {
     deleted_at: string | null;
 }
 
+export interface BackupSavedView {
+    id: number;
+    scope: 'account' | 'global';
+    account_id: number | null;
+    name: string;
+    filters: string; // JSON-encoded
+    is_default: number;
+    position: number;
+    created_at: string;
+    deleted_at: string | null;
+}
+
 export interface BackupPayload {
     version: number;
     exported_at: string;
@@ -52,6 +64,7 @@ export interface BackupPayload {
     transactions: BackupTransaction[];
     attachments: BackupAttachment[];
     budgets: BackupBudget[];
+    saved_views?: BackupSavedView[];
 }
 
 export interface ImportResult {
@@ -59,4 +72,5 @@ export interface ImportResult {
     transactions: number;
     attachments: number;
     budgets: number;
+    saved_views: number;
 }
