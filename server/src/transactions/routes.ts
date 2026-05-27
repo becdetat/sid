@@ -2,16 +2,8 @@ import { Router } from 'express';
 import * as repo from './repository';
 import { findById as findAccount } from '../accounts/repository';
 
-const router = Router({ mergeParams: true });
-
-router.get<{ accountId: string }>('/', (req, res) => {
-    const accountId = parseInt(req.params.accountId, 10);
-    if (!findAccount(accountId)) {
-        res.status(404).json({ error: 'account not found' });
-        return;
-    }
-
-    const { keyword, from, to, category, type, amountMin, amountMax } = req.query;
+export function parseFilters(query: Record<string, unknown>): repo.TransactionFilters {
+    const { keyword, from, to, category, type, amountMin, amountMax, hasAttachment, recurringOnly } = query;
     const filters: repo.TransactionFilters = {};
     if (typeof keyword === 'string' && keyword) filters.keyword = keyword;
     if (typeof from === 'string' && from) filters.from = from;
@@ -24,7 +16,22 @@ router.get<{ accountId: string }>('/', (req, res) => {
     if (typeof amountMax === 'string' && amountMax && !isNaN(Number(amountMax))) {
         filters.amountMax = Number(amountMax);
     }
+    if (hasAttachment === 'true') filters.hasAttachment = true;
+    else if (hasAttachment === 'false') filters.hasAttachment = false;
+    if (recurringOnly === 'true') filters.recurringOnly = true;
+    return filters;
+}
 
+const router = Router({ mergeParams: true });
+
+router.get<{ accountId: string }>('/', (req, res) => {
+    const accountId = parseInt(req.params.accountId, 10);
+    if (!findAccount(accountId)) {
+        res.status(404).json({ error: 'account not found' });
+        return;
+    }
+
+    const filters = parseFilters(req.query);
     res.json(repo.findByAccount(accountId, Object.keys(filters).length > 0 ? filters : undefined));
 });
 

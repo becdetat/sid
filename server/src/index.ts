@@ -7,6 +7,7 @@ import './db';
 import { generateDueOccurrences } from './recurrence/service';
 import accountRoutes from './accounts/routes';
 import transactionRoutes from './transactions/routes';
+import transactionSearchRoutes from './transactions/searchRoutes';
 import { txAttachmentRouter, attachmentRouter } from './attachments/routes';
 import dashboardRoutes from './dashboard/routes';
 import dashboardConfigRoutes from './dashboard-config/routes';
@@ -28,6 +29,7 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
 
+app.use('/api/transactions/search', transactionSearchRoutes);
 app.use('/api/backup', backupExportRoutes);
 app.use('/api/backup', backupImportRoutes);
 app.use('/api/dashboard', dashboardRoutes);

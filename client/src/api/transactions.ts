@@ -13,21 +13,44 @@ export interface TransactionFilters {
     type?: 'income' | 'expense' | '';
     amountMin?: string;
     amountMax?: string;
+    hasAttachment?: 'yes' | 'no' | '';
+    recurringOnly?: boolean;
+}
+
+function toQueryParams(filters?: TransactionFilters): Record<string, string> {
+    const params: Record<string, string> = {};
+    if (!filters) return params;
+    if (filters.keyword) params.keyword = filters.keyword;
+    if (filters.from) params.from = filters.from;
+    if (filters.to) params.to = filters.to;
+    if (filters.category) params.category = filters.category;
+    if (filters.type) params.type = filters.type;
+    if (filters.amountMin) params.amountMin = filters.amountMin;
+    if (filters.amountMax) params.amountMax = filters.amountMax;
+    if (filters.hasAttachment === 'yes') params.hasAttachment = 'true';
+    else if (filters.hasAttachment === 'no') params.hasAttachment = 'false';
+    if (filters.recurringOnly) params.recurringOnly = 'true';
+    return params;
 }
 
 export async function listTransactions(
     accountId: number,
     filters?: TransactionFilters,
 ): Promise<Transaction[]> {
-    const params: Record<string, string> = {};
-    if (filters?.keyword) params.keyword = filters.keyword;
-    if (filters?.from) params.from = filters.from;
-    if (filters?.to) params.to = filters.to;
-    if (filters?.category) params.category = filters.category;
-    if (filters?.type) params.type = filters.type;
-    if (filters?.amountMin) params.amountMin = filters.amountMin;
-    if (filters?.amountMax) params.amountMax = filters.amountMax;
-    const { data } = await axios.get<Transaction[]>(base(accountId), { params });
+    const { data } = await axios.get<Transaction[]>(base(accountId), { params: toQueryParams(filters) });
+    return data;
+}
+
+export interface TransactionWithAccount extends Transaction {
+    account_name: string;
+}
+
+export async function searchAllTransactions(
+    filters?: TransactionFilters,
+): Promise<TransactionWithAccount[]> {
+    const { data } = await axios.get<TransactionWithAccount[]>('/api/transactions/search', {
+        params: toQueryParams(filters),
+    });
     return data;
 }
 

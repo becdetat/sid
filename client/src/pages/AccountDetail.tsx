@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -129,6 +129,14 @@ export default function AccountDetail() {
     const [filterType, setFilterType] = useState<'income' | 'expense' | ''>('');
     const [amountMin, setAmountMin] = useState('');
     const [amountMax, setAmountMax] = useState('');
+    const [filterHasAttachment, setFilterHasAttachment] = useState<'yes' | 'no' | ''>('');
+    const [filterRecurringOnly, setFilterRecurringOnly] = useState(false);
+
+    const expandTxId = (() => {
+        const v = new URLSearchParams(location.search).get('expand');
+        const n = v ? parseInt(v, 10) : NaN;
+        return Number.isFinite(n) ? n : null;
+    })();
 
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const selectAllRef = useRef<HTMLInputElement>(null);
@@ -146,6 +154,8 @@ export default function AccountDetail() {
         type: filterType || undefined,
         amountMin: amountMin || undefined,
         amountMax: amountMax || undefined,
+        hasAttachment: filterHasAttachment || undefined,
+        recurringOnly: filterRecurringOnly || undefined,
     };
     const isFiltered = Object.values(activeFilters).some(Boolean);
 
@@ -158,6 +168,8 @@ export default function AccountDetail() {
         setFilterType('');
         setAmountMin('');
         setAmountMax('');
+        setFilterHasAttachment('');
+        setFilterRecurringOnly(false);
     }
 
     const { data: account, isLoading: accountLoading } = useQuery({
@@ -177,17 +189,15 @@ export default function AccountDetail() {
 
     const balance = transactions.reduce((sum, t) => sum + t.amount_cents, 0);
 
-    const visibleIds = new Set(transactions.map((t) => t.id));
-    useEffect(() => {
-        setSelectedIds((prev) => {
-            const next = new Set([...prev].filter((id) => visibleIds.has(id)));
-            return next.size === prev.size ? prev : next;
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [transactions]);
+    // Derive the visible selection from current transactions — stale ids in `selectedIds`
+    // (e.g. from filter changes) are simply ignored at read time rather than reconciled in an effect.
+    const visibleSelectedIds = useMemo(() => {
+        const visible = new Set(transactions.map((t) => t.id));
+        return new Set([...selectedIds].filter((id) => visible.has(id)));
+    }, [selectedIds, transactions]);
 
-    const allSelected = selectedIds.size === transactions.length && transactions.length > 0;
-    const someSelected = selectedIds.size > 0 && !allSelected;
+    const allSelected = visibleSelectedIds.size === transactions.length && transactions.length > 0;
+    const someSelected = visibleSelectedIds.size > 0 && !allSelected;
 
     useEffect(() => {
         if (selectAllRef.current) {
@@ -291,6 +301,9 @@ export default function AccountDetail() {
         if (activeFilters.type) params.set('type', activeFilters.type);
         if (activeFilters.amountMin) params.set('amountMin', activeFilters.amountMin);
         if (activeFilters.amountMax) params.set('amountMax', activeFilters.amountMax);
+        if (activeFilters.hasAttachment === 'yes') params.set('hasAttachment', 'true');
+        else if (activeFilters.hasAttachment === 'no') params.set('hasAttachment', 'false');
+        if (activeFilters.recurringOnly) params.set('recurringOnly', 'true');
         const qs = params.toString();
         const a = document.createElement('a');
         a.href = `/api/accounts/${accountId}/export${qs ? `?${qs}` : ''}`;
@@ -301,7 +314,7 @@ export default function AccountDetail() {
 
     async function handleBulkExport() {
         try {
-            await bulkExportTransactions(accountId, [...selectedIds]);
+            await bulkExportTransactions(accountId, [...visibleSelectedIds]);
             setSelectedIds(new Set());
         } catch {
             toast.error('Failed to export transactions.');
@@ -408,7 +421,7 @@ export default function AccountDetail() {
                                 <input
                                     type="text"
                                     className="sid-input"
-                                    placeholder="Description or notes…"
+                                    placeholder="Description, notes or category…"
                                     value={keyword}
                                     onChange={(e) => setKeyword(e.target.value)}
                                 />
@@ -478,6 +491,27 @@ export default function AccountDetail() {
                                     />
                                 </div>
                             </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Attachment</label>
+                                <select
+                                    className="sid-input"
+                                    value={filterHasAttachment}
+                                    onChange={(e) => setFilterHasAttachment(e.target.value as 'yes' | 'no' | '')}
+                                >
+                                    <option value="">Any</option>
+                                    <option value="yes">Has attachment</option>
+                                    <option value="no">No attachment</option>
+                                </select>
+                            </div>
+                            <label className="flex items-center gap-2 self-end pb-[6px] text-xs font-body text-[var(--text)] cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={filterRecurringOnly}
+                                    onChange={(e) => setFilterRecurringOnly(e.target.checked)}
+                                    className="w-4 h-4 cursor-pointer accent-[var(--teak)]"
+                                />
+                                Recurring only
+                            </label>
                             {isFiltered && (
                                 <button
                                     className="sid-btn sid-btn-ghost sid-btn-sm self-end"
@@ -492,7 +526,7 @@ export default function AccountDetail() {
             </div>
 
             <BulkActionBar
-                selectedCount={selectedIds.size}
+                selectedCount={visibleSelectedIds.size}
                 onDelete={() => setModal({ type: 'bulk-delete' })}
                 onExport={handleBulkExport}
                 onClear={handleClearSelection}
@@ -550,6 +584,7 @@ export default function AccountDetail() {
                             transaction={t}
                             isLast={idx === transactions.length - 1}
                             gridTemplate={TX_GRID}
+                            initialExpanded={expandTxId === t.id}
                             onEdit={(tx) => {
                                 if (tx.recurrence || tx.recurrence_source_id) {
                                     setModal({ type: 'edit-scope', transaction: tx });
@@ -564,7 +599,7 @@ export default function AccountDetail() {
                                     setModal({ type: 'delete', transaction: tx });
                                 }
                             }}
-                            isSelected={selectedIds.has(t.id)}
+                            isSelected={visibleSelectedIds.has(t.id)}
                             onSelect={handleSelectRow}
                         />
                     ))}
@@ -609,8 +644,8 @@ export default function AccountDetail() {
             )}
             {modal?.type === 'bulk-delete' && (
                 <ConfirmDialog
-                    message={`Delete ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}? This will also delete any attachments.`}
-                    onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
+                    message={`Delete ${visibleSelectedIds.size} transaction${visibleSelectedIds.size !== 1 ? 's' : ''}? This will also delete any attachments.`}
+                    onConfirm={() => bulkDeleteMutation.mutate([...visibleSelectedIds])}
                     onCancel={() => setModal(null)}
                 />
             )}

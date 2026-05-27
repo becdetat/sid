@@ -37,6 +37,11 @@ export function Page({
                                 {formatCents(balance)}
                             </span>
                         )}
+                        <Link to="/search" aria-label="Search" className="sid-icon-btn">
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M9 3a6 6 0 104.472 10.03l3.249 3.248a1 1 0 001.414-1.414l-3.249-3.248A6 6 0 009 3zM5 9a4 4 0 118 0 4 4 0 01-8 0z" clipRule="evenodd" />
+                            </svg>
+                        </Link>
                         <Link to="/settings" aria-label="Settings" className="sid-icon-btn">
                             <GearIcon />
                         </Link>

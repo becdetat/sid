@@ -57,45 +57,89 @@ export interface TransactionFilters {
     type?: 'income' | 'expense';
     amountMin?: number;
     amountMax?: number;
+    hasAttachment?: boolean;
+    recurringOnly?: boolean;
 }
 
-export function findByAccount(accountId: number, filters?: TransactionFilters): Transaction[] {
-    const conditions: string[] = ['account_id = ?', 'deleted_at IS NULL'];
-    const params: unknown[] = [accountId];
+function buildFilterClauses(filters: TransactionFilters | undefined, tableAlias = ''): { conditions: string[]; params: unknown[] } {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    // Fully qualify when the caller didn't supply an alias — bare column names in correlated
+    // EXISTS subqueries can resolve to the inner table's columns (e.g. attachments.id).
+    const qualifier = tableAlias || 'transactions';
+    const col = (c: string) => `${qualifier}.${c}`;
 
     if (filters?.keyword) {
-        conditions.push('(description LIKE ? OR notes LIKE ?)');
+        conditions.push(
+            `(${col('description')} LIKE ? OR ${col('notes')} LIKE ? OR ${col('category')} LIKE ?)`,
+        );
         const kw = `%${filters.keyword}%`;
-        params.push(kw, kw);
+        params.push(kw, kw, kw);
     }
     if (filters?.from) {
-        conditions.push('date >= ?');
+        conditions.push(`${col('date')} >= ?`);
         params.push(filters.from);
     }
     if (filters?.to) {
-        conditions.push('date <= ?');
+        conditions.push(`${col('date')} <= ?`);
         params.push(filters.to);
     }
     if (filters?.category) {
-        conditions.push('category = ?');
+        conditions.push(`${col('category')} = ?`);
         params.push(filters.category);
     }
     if (filters?.type) {
-        conditions.push('type = ?');
+        conditions.push(`${col('type')} = ?`);
         params.push(filters.type);
     }
     if (filters?.amountMin !== undefined) {
         // ABS() because expenses are stored as negative but the user provides a positive bound
-        conditions.push('ABS(amount_cents) >= ?');
+        conditions.push(`ABS(${col('amount_cents')}) >= ?`);
         params.push(Math.round(filters.amountMin * 100));
     }
     if (filters?.amountMax !== undefined) {
-        conditions.push('ABS(amount_cents) <= ?');
+        conditions.push(`ABS(${col('amount_cents')}) <= ?`);
         params.push(Math.round(filters.amountMax * 100));
     }
+    if (filters?.hasAttachment === true) {
+        conditions.push(
+            `EXISTS (SELECT 1 FROM attachments a WHERE a.transaction_id = ${col('id')} AND a.deleted_at IS NULL)`,
+        );
+    } else if (filters?.hasAttachment === false) {
+        conditions.push(
+            `NOT EXISTS (SELECT 1 FROM attachments a WHERE a.transaction_id = ${col('id')} AND a.deleted_at IS NULL)`,
+        );
+    }
+    if (filters?.recurringOnly) {
+        conditions.push(`(${col('recurrence')} IS NOT NULL OR ${col('recurrence_source_id')} IS NOT NULL)`);
+    }
 
-    const sql = `SELECT * FROM transactions WHERE ${conditions.join(' AND ')} ORDER BY date DESC, id DESC`;
-    return db.prepare(sql).all(...params) as Transaction[];
+    return { conditions, params };
+}
+
+export function findByAccount(accountId: number, filters?: TransactionFilters): Transaction[] {
+    const { conditions, params } = buildFilterClauses(filters);
+    const allConditions = ['account_id = ?', 'deleted_at IS NULL', ...conditions];
+    const allParams = [accountId, ...params];
+
+    const sql = `SELECT * FROM transactions WHERE ${allConditions.join(' AND ')} ORDER BY date DESC, id DESC`;
+    return db.prepare(sql).all(...allParams) as Transaction[];
+}
+
+export interface TransactionWithAccount extends Transaction {
+    account_name: string;
+}
+
+export function searchAll(filters?: TransactionFilters): TransactionWithAccount[] {
+    const { conditions, params } = buildFilterClauses(filters, 't');
+    const allConditions = ['t.deleted_at IS NULL', 'a.deleted_at IS NULL', ...conditions];
+
+    const sql = `SELECT t.*, a.name AS account_name
+                 FROM transactions t
+                 JOIN accounts a ON a.id = t.account_id
+                 WHERE ${allConditions.join(' AND ')}
+                 ORDER BY t.date DESC, t.id DESC`;
+    return db.prepare(sql).all(...params) as TransactionWithAccount[];
 }
 
 export function findById(id: number): Transaction | undefined {

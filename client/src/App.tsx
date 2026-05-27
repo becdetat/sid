@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import Dashboard from './pages/Dashboard';
 import AccountDetail from './pages/AccountDetail';
 import AllAccounts from './pages/AllAccounts';
+import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Footer from './components/Footer';
 
@@ -19,6 +20,7 @@ export default function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/accounts" element={<AllAccounts />} />
                         <Route path="/accounts/:id" element={<AccountDetail />} />
+                        <Route path="/search" element={<Search />} />
                         <Route path="/settings" element={<Settings />} />
                     </Routes>
                     <Footer />

@@ -13,6 +13,7 @@ interface Props {
     onDelete: (t: Transaction) => void;
     isSelected?: boolean;
     onSelect?: (id: number) => void;
+    initialExpanded?: boolean;
 }
 
 const EditIcon = () => (
@@ -32,8 +33,8 @@ function formatBytes(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete, isSelected = false, onSelect }: Props) {
-    const [expanded, setExpanded] = useState(false);
+export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete, isSelected = false, onSelect, initialExpanded = false }: Props) {
+    const [expanded, setExpanded] = useState(initialExpanded);
     const isIncome = transaction.type === 'income';
 
     const { data: attachments = [] } = useQuery<Attachment[]>({
