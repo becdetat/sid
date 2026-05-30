@@ -29,6 +29,8 @@ export default function Dashboard() {
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
     const [lastGlobalAccountId, setLastGlobalAccountId] = useState<number | undefined>(undefined);
+    const [addTransactionFormKey, setAddTransactionFormKey] = useState(0);
+    const [addTransactionGlobalFormKey, setAddTransactionGlobalFormKey] = useState(0);
 
     const { data: tileConfig = [], isLoading: configLoading } = useQuery({
         queryKey: ['dashboard-config'],
@@ -64,7 +66,7 @@ export default function Dashboard() {
         onError: () => toast.error('Failed to add transaction.'),
     });
 
-    async function handleAddTransaction(data: TransactionPayload, pendingFiles: File[]) {
+    async function handleAddTransaction(data: TransactionPayload, pendingFiles: File[], addAnother: boolean) {
         if (modal?.type !== 'add-transaction') return;
         const tx = await addTransactionMutation.mutateAsync({ accountId: modal.account.id, data });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -78,11 +80,15 @@ export default function Dashboard() {
                 return;
             }
         }
-        setModal(null);
+        if (addAnother) {
+            setAddTransactionFormKey((k) => k + 1);
+        } else {
+            setModal(null);
+        }
         toast.success('Transaction added.');
     }
 
-    async function handleAddTransactionGlobal(data: Parameters<typeof handleAddTransaction>[0] & { account_id?: number }, pendingFiles: File[]) {
+    async function handleAddTransactionGlobal(data: Parameters<typeof handleAddTransaction>[0] & { account_id?: number }, pendingFiles: File[], addAnother: boolean) {
         if (modal?.type !== 'add-transaction-global' || !data.account_id) return;
         const accountId = data.account_id;
         const tx = await addTransactionMutation.mutateAsync({ accountId, data });
@@ -99,7 +105,11 @@ export default function Dashboard() {
             }
         }
         setLastGlobalAccountId(accountId);
-        setModal(null);
+        if (addAnother) {
+            setAddTransactionGlobalFormKey((k) => k + 1);
+        } else {
+            setModal(null);
+        }
         toast.success('Transaction added.');
     }
 
@@ -218,12 +228,14 @@ export default function Dashboard() {
             )}
             {modal?.type === 'add-transaction' && (
                 <TransactionForm
+                    key={addTransactionFormKey}
                     onSubmit={handleAddTransaction}
                     onCancel={() => setModal(null)}
                 />
             )}
             {modal?.type === 'add-transaction-global' && (
                 <TransactionForm
+                    key={addTransactionGlobalFormKey}
                     accounts={allAccountsWithBalances}
                     initialAccountId={lastGlobalAccountId}
                     onSubmit={handleAddTransactionGlobal}

@@ -119,6 +119,7 @@ export default function AccountDetail() {
     const fromAllAccounts = locationState?.from === 'all-accounts';
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
+    const [createFormKey, setCreateFormKey] = useState(0);
     const [isImporting, setIsImporting] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const importInputRef = useRef<HTMLInputElement>(null);
@@ -298,7 +299,7 @@ export default function AccountDetail() {
         onError: () => toast.error('Failed to delete transactions.'),
     });
 
-    async function handleCreate(data: TransactionPayload, pendingFiles: File[]) {
+    async function handleCreate(data: TransactionPayload, pendingFiles: File[], addAnother: boolean) {
         const tx = await createMutation.mutateAsync(data);
         queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
         if (pendingFiles.length > 0) {
@@ -310,7 +311,11 @@ export default function AccountDetail() {
                 return;
             }
         }
-        setModal(null);
+        if (addAnother) {
+            setCreateFormKey((k) => k + 1);
+        } else {
+            setModal(null);
+        }
         toast.success('Transaction added.');
     }
 
@@ -673,7 +678,8 @@ export default function AccountDetail() {
 
             {modal?.type === 'create' && (
                 <TransactionForm
-                    onSubmit={(data, files) => handleCreate(data, files)}
+                    key={createFormKey}
+                    onSubmit={handleCreate}
                     onCancel={() => setModal(null)}
                 />
             )}
@@ -691,6 +697,7 @@ export default function AccountDetail() {
                     onSubmit={(data, files) => handleUpdate(modal.transaction.id, data, files, modal.scope)}
                     onCancel={() => setModal(null)}
                 />
+
             )}
             {modal?.type === 'delete-scope' && (
                 <RecurrenceScopeDialog

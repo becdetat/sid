@@ -23,7 +23,7 @@ interface Props {
     initial?: Transaction;
     accounts?: AccountWithBalance[];
     initialAccountId?: number;
-    onSubmit: (data: TransactionData, pendingFiles: File[]) => void;
+    onSubmit: (data: TransactionData, pendingFiles: File[], addAnother: boolean) => void;
     onCancel: () => void;
 }
 
@@ -64,6 +64,7 @@ export default function TransactionForm({ initial, accounts, initialAccountId, o
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+    const [addAnother, setAddAnother] = useState(() => localStorage.getItem('sid:addAnotherTransaction') === 'true');
     const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const today = new Date().toISOString().split('T')[0];
@@ -153,6 +154,7 @@ export default function TransactionForm({ initial, accounts, initialAccountId, o
                 ...(accounts && selectedAccountId ? { account_id: parseInt(selectedAccountId) } : {}),
             },
             pendingFiles,
+            addAnother,
         );
     }
 
@@ -333,9 +335,25 @@ export default function TransactionForm({ initial, accounts, initialAccountId, o
                             </p>
                         )}
 
-                        <div className="flex justify-end gap-2.5 pt-1">
-                            <button type="button" className="sid-btn sid-btn-ghost" onClick={handleCancel}>Cancel</button>
-                            <button type="submit" className="sid-btn sid-btn-primary">Save transaction</button>
+                        <div className="flex items-center pt-1 gap-2.5">
+                            {!initial && (
+                                <label className="flex items-center gap-2 cursor-pointer select-none flex-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={addAnother}
+                                        onChange={(e) => {
+                                            setAddAnother(e.target.checked);
+                                            localStorage.setItem('sid:addAnotherTransaction', String(e.target.checked));
+                                        }}
+                                        className="w-4 h-4 accent-[var(--accent)]"
+                                    />
+                                    <span className="sid-label mb-0">Add another</span>
+                                </label>
+                            )}
+                            <div className="flex gap-2.5 ml-auto">
+                                <button type="button" className="sid-btn sid-btn-ghost" onClick={handleCancel}>Cancel</button>
+                                <button type="submit" className="sid-btn sid-btn-primary">Save transaction</button>
+                            </div>
                         </div>
                     </form>
                 </div>
