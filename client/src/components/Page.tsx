@@ -13,7 +13,7 @@ export function Page({
     balance?: number | undefined
 }) {
     return (
-        <div className="min-h-screen">
+        <div className="flex-1">
             {/* Nav */}
             <header className="bg-[var(--white)] [border-bottom:1.5px_solid_var(--border)] shadow-[0_1px_0_var(--cream-dark)] sticky top-0 z-[100]">
                 <div className="max-w-[1100px] mx-auto px-4 sm:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
