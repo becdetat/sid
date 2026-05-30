@@ -55,9 +55,19 @@ export function reorder(tileIds: number[]): void {
     run(tileIds);
 }
 
-export function updateShowBalance(tileId: number, showBalance: boolean): boolean {
+export interface UpdateTileFields {
+    account_id: number;
+    tile_type: TileType;
+    time_window: string | null;
+    show_balance: boolean;
+}
+
+export function updateTile(tileId: number, fields: UpdateTileFields): DashboardConfigItem | null {
     const result = db
-        .prepare('UPDATE dashboard_config SET show_balance = ? WHERE id = ?')
-        .run(showBalance ? 1 : 0, tileId);
-    return result.changes > 0;
+        .prepare('UPDATE dashboard_config SET account_id = ?, tile_type = ?, time_window = ?, show_balance = ? WHERE id = ?')
+        .run(fields.account_id, fields.tile_type, fields.time_window, fields.show_balance ? 1 : 0, tileId);
+    if (result.changes === 0) return null;
+    return db
+        .prepare(`${SELECT_SQL} WHERE dc.id = ?`)
+        .get(tileId) as DashboardConfigItem;
 }
