@@ -71,9 +71,9 @@ describe('DashboardSection', () => {
         ]);
         renderSection();
         await waitFor(() => {
-            expect(screen.getByText('Savings — Balance over time')).toBeTruthy();
+            expect(screen.getByText('Savings — Balance over time — Last 30 days')).toBeTruthy();
         });
-        expect(screen.getByText('Checking — Totals by category')).toBeTruthy();
+        expect(screen.getByText('Checking — Totals by category — Last 3 months')).toBeTruthy();
     });
 
     it('disables up button for the first tile', async () => {

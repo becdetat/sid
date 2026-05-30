@@ -11,6 +11,7 @@ import {
     type DashboardConfigItem,
 } from '../../api/dashboardConfig';
 import { listAccounts } from '../../api/accounts';
+import { formatChartWindow } from '../../utils/chartWindow';
 
 const TILE_TYPE_LABELS: Record<TileType, string> = {
     transactions: 'Transactions',
@@ -37,7 +38,9 @@ const INCOME_VS_EXPENSE_WINDOW_OPTIONS = [
 
 function tileLabel(item: DashboardConfigItem, accountName: string): string {
     if (item.tile_type === 'transactions') return accountName;
-    return `${accountName} — ${TILE_TYPE_LABELS[item.tile_type]}`;
+    const base = `${accountName} — ${TILE_TYPE_LABELS[item.tile_type]}`;
+    if (item.time_window) return `${base} — ${formatChartWindow(item.time_window)}`;
+    return base;
 }
 
 function isValidWeeks(value: string): boolean {
