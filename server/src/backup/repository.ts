@@ -1,5 +1,5 @@
 import db from '../db';
-import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, ImportResult } from './types';
+import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, BackupTag, BackupTransactionTag, ImportResult } from './types';
 
 function formatTimestamp(d: Date): string {
     const p = (n: number) => String(n).padStart(2, '0');
@@ -22,14 +22,20 @@ export function exportAll(): BackupPayload {
 
     const saved_views = db.prepare(`SELECT id, scope, account_id, name, filters, is_default, position, created_at, deleted_at FROM saved_views ORDER BY id`).all() as BackupSavedView[];
 
+    const tags = db.prepare(`SELECT id, name, colour, created_at, deleted_at FROM tags ORDER BY id`).all() as BackupTag[];
+
+    const transaction_tags = db.prepare(`SELECT transaction_id, tag_id FROM transaction_tags ORDER BY transaction_id, tag_id`).all() as BackupTransactionTag[];
+
     return {
-        version: 3,
+        version: 4,
         exported_at: new Date().toISOString(),
         accounts,
         transactions,
         attachments,
         budgets,
         saved_views,
+        tags,
+        transaction_tags,
     };
 }
 
@@ -149,12 +155,43 @@ export function importMerge(payload: BackupPayload): ImportResult {
             }
         }
 
+        let tagsImported = 0;
+        if (Array.isArray(p.tags)) {
+            const upsertTag = db.prepare(
+                `INSERT INTO tags (name, colour, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?)
+                 ON CONFLICT(LOWER(name)) WHERE deleted_at IS NULL
+                 DO NOTHING`,
+            );
+            const findTagByName = db.prepare(`SELECT id FROM tags WHERE LOWER(name) = LOWER(?) AND deleted_at IS NULL`);
+            const tagIdMap = new Map<number, number>();
+
+            for (const tag of p.tags) {
+                upsertTag.run(tag.name, tag.colour, tag.created_at, tag.deleted_at);
+                const existing = findTagByName.get(tag.name) as { id: number } | undefined;
+                if (existing) tagIdMap.set(tag.id, existing.id);
+                tagsImported++;
+            }
+
+            if (Array.isArray(p.transaction_tags)) {
+                const insertTT = db.prepare('INSERT OR IGNORE INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?)');
+                for (const tt of p.transaction_tags) {
+                    const newTxId = transactionIdMap.get(tt.transaction_id);
+                    const newTagId = tagIdMap.get(tt.tag_id);
+                    if (newTxId !== undefined && newTagId !== undefined) {
+                        insertTT.run(newTxId, newTagId);
+                    }
+                }
+            }
+        }
+
         return {
             accounts: accountIdMap.size,
             transactions: transactionIdMap.size,
             attachments: p.attachments.filter((a) => transactionIdMap.has(a.transaction_id)).length,
             budgets: budgetsImported,
             saved_views: savedViewsImported,
+            tags: tagsImported,
         };
     });
 
@@ -223,12 +260,32 @@ export function importWipe(payload: BackupPayload): ImportResult {
             }
         }
 
+        let tagsImported = 0;
+        if (Array.isArray(p.tags)) {
+            db.prepare('DELETE FROM transaction_tags').run();
+            db.prepare('DELETE FROM tags').run();
+            const insertTag = db.prepare(
+                `INSERT INTO tags (id, name, colour, created_at, deleted_at) VALUES (?, ?, ?, ?, ?)`,
+            );
+            for (const tag of p.tags) {
+                insertTag.run(tag.id, tag.name, tag.colour, tag.created_at, tag.deleted_at);
+                tagsImported++;
+            }
+            if (Array.isArray(p.transaction_tags)) {
+                const insertTT = db.prepare('INSERT OR IGNORE INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?)');
+                for (const tt of p.transaction_tags) {
+                    insertTT.run(tt.transaction_id, tt.tag_id);
+                }
+            }
+        }
+
         return {
             accounts: p.accounts.length,
             transactions: p.transactions.length,
             attachments: p.attachments.length,
             budgets: budgetsImported,
             saved_views: savedViewsImported,
+            tags: tagsImported,
         };
     });
 

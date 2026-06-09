@@ -19,6 +19,7 @@ const expense: Transaction = {
     recurrence: null,
     recurrence_end_date: null,
     recurrence_source_id: null,
+    tags: [],
 };
 
 const income: Transaction = {

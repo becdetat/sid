@@ -7,6 +7,7 @@ import {
     removeFromDashboard,
     reorderDashboard,
     updateTile,
+    updateShowBalance,
     type TileType,
     type DashboardConfigItem,
 } from '../../api/dashboardConfig';
@@ -309,6 +310,13 @@ export default function DashboardSection() {
         onError: () => toast.error('Failed to add tile to dashboard.'),
     });
 
+    const showBalanceMutation = useMutation({
+        mutationFn: ({ tileId, showBalance }: { tileId: number; showBalance: boolean }) =>
+            updateShowBalance(tileId, showBalance),
+        onSuccess: invalidate,
+        onError: () => toast.error('Failed to update show balance.'),
+    });
+
     function move(index: number, direction: 'up' | 'down') {
         const newConfig = [...config];
         const swapIndex = direction === 'up' ? index - 1 : index + 1;
@@ -383,7 +391,18 @@ export default function DashboardSection() {
                             return (
                                 <tr key={item.id} className="border-b border-[var(--cream-mid)]">
                                     <td className="p-3 text-sm font-semibold text-[var(--text-primary)] font-body">
-                                        {label}
+                                        <span>{label}</span>
+                                        {(item.tile_type === 'transactions' || item.tile_type === 'balance_over_time') && (
+                                            <label className="ml-3 inline-flex items-center gap-1.5 text-xs font-normal text-[var(--text-muted)] cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    aria-label="Show balance"
+                                                    checked={item.show_balance}
+                                                    onChange={(e) => showBalanceMutation.mutate({ tileId: item.id, showBalance: e.target.checked })}
+                                                />
+                                                Show balance
+                                            </label>
+                                        )}
                                     </td>
                                     <td className="p-3 pl-0">
                                         <div className="flex gap-0.5 justify-end">

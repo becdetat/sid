@@ -19,6 +19,7 @@ const existing: Transaction = {
     recurrence: null,
     recurrence_end_date: null,
     recurrence_source_id: null,
+    tags: [],
 };
 
 function wrap(ui: React.ReactElement) {
@@ -85,6 +86,7 @@ describe('TransactionForm', () => {
                 date: '2024-01-15',
             }),
             [],
+            expect.any(Boolean),
         );
     });
 

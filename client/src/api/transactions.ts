@@ -15,6 +15,8 @@ export interface TransactionFilters {
     amountMax?: string;
     hasAttachment?: 'yes' | 'no' | '';
     recurringOnly?: boolean;
+    tagIds?: number[];
+    tagMode?: 'any' | 'all';
 }
 
 function toQueryParams(filters?: TransactionFilters): Record<string, string> {
@@ -30,6 +32,8 @@ function toQueryParams(filters?: TransactionFilters): Record<string, string> {
     if (filters.hasAttachment === 'yes') params.hasAttachment = 'true';
     else if (filters.hasAttachment === 'no') params.hasAttachment = 'false';
     if (filters.recurringOnly) params.recurringOnly = 'true';
+    if (filters.tagIds && filters.tagIds.length > 0) params.tagIds = filters.tagIds.join(',');
+    if (filters.tagMode) params.tagMode = filters.tagMode;
     return params;
 }
 
@@ -69,6 +73,7 @@ export interface TransactionPayload {
     account_id?: number;
     recurrence?: string | null;
     recurrence_end_date?: string | null;
+    tag_ids?: number[];
 }
 
 export async function createTransaction(

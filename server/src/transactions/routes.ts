@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import * as repo from './repository';
+import * as tagRepo from '../tags/repository';
 import { findById as findAccount } from '../accounts/repository';
 
 export function parseFilters(query: Record<string, unknown>): repo.TransactionFilters {
-    const { keyword, from, to, category, type, amountMin, amountMax, hasAttachment, recurringOnly } = query;
+    const { keyword, from, to, category, type, amountMin, amountMax, hasAttachment, recurringOnly, tagIds, tagMode } = query;
     const filters: repo.TransactionFilters = {};
     if (typeof keyword === 'string' && keyword) filters.keyword = keyword;
     if (typeof from === 'string' && from) filters.from = from;
@@ -19,6 +20,11 @@ export function parseFilters(query: Record<string, unknown>): repo.TransactionFi
     if (hasAttachment === 'true') filters.hasAttachment = true;
     else if (hasAttachment === 'false') filters.hasAttachment = false;
     if (recurringOnly === 'true') filters.recurringOnly = true;
+    if (typeof tagIds === 'string' && tagIds) {
+        const ids = tagIds.split(',').map(Number).filter((n) => !isNaN(n) && n > 0);
+        if (ids.length > 0) filters.tagIds = ids;
+    }
+    if (tagMode === 'any' || tagMode === 'all') filters.tagMode = tagMode;
     return filters;
 }
 
@@ -42,7 +48,7 @@ router.post<{ accountId: string }>('/', (req, res) => {
         return;
     }
 
-    const { category, description, amount, type, date, notes, recurrence, recurrence_end_date } = req.body as {
+    const { category, description, amount, type, date, notes, recurrence, recurrence_end_date, tag_ids } = req.body as {
         category?: string;
         description?: string;
         amount?: number;
@@ -51,6 +57,7 @@ router.post<{ accountId: string }>('/', (req, res) => {
         notes?: string;
         recurrence?: string;
         recurrence_end_date?: string;
+        tag_ids?: number[];
     };
 
     if (!category || category.trim() === '') {
@@ -99,7 +106,10 @@ router.post<{ accountId: string }>('/', (req, res) => {
         recurrence: recurrence as repo.RecurrenceFrequency | undefined,
         recurrence_end_date: recurrence_end_date || undefined,
     });
-    res.status(201).json(transaction);
+    if (Array.isArray(tag_ids) && tag_ids.length > 0) {
+        tagRepo.setTagsForTransaction(transaction.id, tag_ids);
+    }
+    res.status(201).json(repo.findById(transaction.id));
 });
 
 router.get<{ accountId: string; id: string }>('/:id', (req, res) => {
@@ -122,7 +132,7 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
-    const { category, description, amount, type, date, notes, account_id, recurrence, recurrence_end_date, scope } = req.body as {
+    const { category, description, amount, type, date, notes, account_id, recurrence, recurrence_end_date, scope, tag_ids } = req.body as {
         category?: string | null;
         description?: string;
         amount?: number;
@@ -133,6 +143,7 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         recurrence?: string | null;
         recurrence_end_date?: string | null;
         scope?: string;
+        tag_ids?: number[];
     };
 
     if (category !== undefined && (category === null || category.trim() === '')) {
@@ -169,11 +180,16 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
     if ('recurrence' in req.body) updateInput.recurrence = (recurrence ?? null) as repo.RecurrenceFrequency | null;
     if ('recurrence_end_date' in req.body) updateInput.recurrence_end_date = recurrence_end_date ?? null;
 
-    const updated = repo.update(id, updateInput);
+    let updated = repo.update(id, updateInput);
 
     if (!updated) {
         res.status(404).json({ error: 'transaction not found' });
         return;
+    }
+
+    if ('tag_ids' in req.body && Array.isArray(tag_ids)) {
+        tagRepo.setTagsForTransaction(id, tag_ids);
+        updated = repo.findById(id)!;
     }
 
     // "This and all future" scope: update the template and soft-delete future generated instances
@@ -188,6 +204,23 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
     }
 
     res.json(updated);
+});
+
+router.put<{ accountId: string; id: string }>('/:id/tags', (req, res) => {
+    const accountId = parseInt(req.params.accountId, 10);
+    const id = parseInt(req.params.id, 10);
+    const existing = repo.findById(id);
+    if (!existing || existing.account_id !== accountId) {
+        res.status(404).json({ error: 'transaction not found' });
+        return;
+    }
+    const { tag_ids } = req.body as { tag_ids?: unknown };
+    if (!Array.isArray(tag_ids) || !tag_ids.every((x) => typeof x === 'number')) {
+        res.status(400).json({ error: 'tag_ids must be an array of numbers' });
+        return;
+    }
+    tagRepo.setTagsForTransaction(id, tag_ids as number[]);
+    res.json(repo.findById(id));
 });
 
 router.delete<{ accountId: string }>('/bulk', (req, res) => {

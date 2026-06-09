@@ -1,4 +1,5 @@
 import db from '../db';
+import { findByTransactionIds, type TagRef } from '../tags/repository';
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly';
 
@@ -17,6 +18,7 @@ export interface Transaction {
     recurrence: RecurrenceFrequency | null;
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
+    tags: TagRef[];
 }
 
 export interface CreateTransactionInput {
@@ -59,6 +61,14 @@ export interface TransactionFilters {
     amountMax?: number;
     hasAttachment?: boolean;
     recurringOnly?: boolean;
+    tagIds?: number[];
+    tagMode?: 'any' | 'all';
+}
+
+function stitchTags<T extends { id: number }>(rows: T[]): (T & { tags: TagRef[] })[] {
+    if (rows.length === 0) return rows.map((r) => ({ ...r, tags: [] }));
+    const map = findByTransactionIds(rows.map((r) => r.id));
+    return rows.map((r) => ({ ...r, tags: map.get(r.id) ?? [] }));
 }
 
 function buildFilterClauses(filters: TransactionFilters | undefined, tableAlias = ''): { conditions: string[]; params: unknown[] } {
@@ -113,6 +123,18 @@ function buildFilterClauses(filters: TransactionFilters | undefined, tableAlias 
     if (filters?.recurringOnly) {
         conditions.push(`(${col('recurrence')} IS NOT NULL OR ${col('recurrence_source_id')} IS NOT NULL)`);
     }
+    if (filters?.tagIds && filters.tagIds.length > 0) {
+        if (filters.tagMode === 'all') {
+            for (const tagId of filters.tagIds) {
+                conditions.push(`EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = ${col('id')} AND tt.tag_id = ?)`);
+                params.push(tagId);
+            }
+        } else {
+            const tagPlaceholders = filters.tagIds.map(() => '?').join(',');
+            conditions.push(`EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = ${col('id')} AND tt.tag_id IN (${tagPlaceholders}))`);
+            params.push(...filters.tagIds);
+        }
+    }
 
     return { conditions, params };
 }
@@ -123,7 +145,8 @@ export function findByAccount(accountId: number, filters?: TransactionFilters): 
     const allParams = [accountId, ...params];
 
     const sql = `SELECT * FROM transactions WHERE ${allConditions.join(' AND ')} ORDER BY date DESC, id DESC`;
-    return db.prepare(sql).all(...allParams) as Transaction[];
+    const rows = db.prepare(sql).all(...allParams) as Omit<Transaction, 'tags'>[];
+    return stitchTags(rows) as Transaction[];
 }
 
 export interface TransactionWithAccount extends Transaction {
@@ -139,13 +162,16 @@ export function searchAll(filters?: TransactionFilters): TransactionWithAccount[
                  JOIN accounts a ON a.id = t.account_id
                  WHERE ${allConditions.join(' AND ')}
                  ORDER BY t.date DESC, t.id DESC`;
-    return db.prepare(sql).all(...params) as TransactionWithAccount[];
+    const rows = db.prepare(sql).all(...params) as Omit<TransactionWithAccount, 'tags'>[];
+    return stitchTags(rows) as TransactionWithAccount[];
 }
 
 export function findById(id: number): Transaction | undefined {
-    return db
+    const row = db
         .prepare('SELECT * FROM transactions WHERE id = ? AND deleted_at IS NULL')
-        .get(id) as Transaction | undefined;
+        .get(id) as Omit<Transaction, 'tags'> | undefined;
+    if (!row) return undefined;
+    return stitchTags([row])[0] as Transaction;
 }
 
 export function create(input: CreateTransactionInput): Transaction {

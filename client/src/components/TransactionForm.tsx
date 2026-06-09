@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { Transaction, RecurrenceFrequency } from '../types/transaction';
+import type { Transaction, RecurrenceFrequency, TagRef } from '../types/transaction';
 import type { AccountWithBalance } from '../types/account';
 import { getCategories } from '../api/categories';
 import AttachmentManager from './AttachmentManager';
 import ConfirmDialog from './ConfirmDialog';
+import TagPicker from './TagPicker';
 import { formatDateTime } from '../utils/format';
 
 interface TransactionData {
@@ -17,6 +18,7 @@ interface TransactionData {
     recurrence?: RecurrenceFrequency | null;
     recurrence_end_date?: string | null;
     account_id?: number;
+    tag_ids?: number[];
 }
 
 interface Props {
@@ -61,6 +63,7 @@ export default function TransactionForm({ initial, accounts, initialAccountId, o
     const [repeat, setRepeat] = useState(!!initial?.recurrence);
     const [recurrence, setRecurrence] = useState<RecurrenceFrequency>(initial?.recurrence ?? 'monthly');
     const [recurrenceEndDate, setRecurrenceEndDate] = useState(initial?.recurrence_end_date ?? '');
+    const [selectedTags, setSelectedTags] = useState<TagRef[]>(initial?.tags ?? []);
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
@@ -151,6 +154,7 @@ export default function TransactionForm({ initial, accounts, initialAccountId, o
                 notes: notes.trim() || null,
                 recurrence: repeat ? recurrence : null,
                 recurrence_end_date: repeat && recurrenceEndDate ? recurrenceEndDate : null,
+                tag_ids: selectedTags.map((t) => t.id),
                 ...(accounts && selectedAccountId ? { account_id: parseInt(selectedAccountId) } : {}),
             },
             pendingFiles,
@@ -230,6 +234,9 @@ export default function TransactionForm({ initial, accounts, initialAccountId, o
                                 </ul>
                             )}
                         </div>
+
+                        {/* Tags */}
+                        <TagPicker selectedTags={selectedTags} onChange={setSelectedTags} />
 
                         {/* Description */}
                         <div className="flex flex-col gap-[5px]">

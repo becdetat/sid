@@ -27,7 +27,12 @@
       "Bash(curl -sv http://localhost:3001/api/dashboard-config)",
       "Bash(cat /tmp/sid-dev.log 2>&1 | tail -30)",
       "Read(//tmp/**)",
-      "Bash(curl -s http://localhost:3000/api/accounts/)"
+      "Bash(curl -s http://localhost:3000/api/accounts/)",
+      "Bash(git stash *)",
+      "Bash(npx vite *)",
+      "Bash(DATABASE_PATH=/tmp/sid-verify-tags.db node server/dist/index.js)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl *)"
     ]
   }
 }

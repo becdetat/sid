@@ -81,6 +81,19 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                                     </>
                                 )}
                             </div>
+                            {transaction.tags && transaction.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {transaction.tags.map((tag) => (
+                                        <span
+                                            key={tag.id}
+                                            className="inline-block px-2 py-[1px] rounded-full text-[10px] font-bold [border:1px_solid_var(--border)] bg-[var(--cream)]"
+                                            style={tag.colour ? { background: tag.colour + '22', color: tag.colour, borderColor: tag.colour + '55' } : undefined}
+                                        >
+                                            {tag.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="shrink-0 text-right">
                             <div className="text-[13px] font-bold" style={{ color: balanceColor(transaction.amount_cents) }}>
@@ -124,7 +137,22 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                     )}
                     <span className="text-[13px] text-[var(--text-muted)]">{formatDate(transaction.date)}</span>
                     <span className="text-xs text-[var(--text-muted)]">{transaction.category ?? ''}</span>
-                    <span className="text-[13px] text-[var(--text-primary)] font-semibold">{transaction.description}</span>
+                    <span className="text-[13px] text-[var(--text-primary)] font-semibold">
+                        {transaction.description}
+                        {transaction.tags && transaction.tags.length > 0 && (
+                            <span className="ml-2 inline-flex flex-wrap gap-1">
+                                {transaction.tags.map((tag) => (
+                                    <span
+                                        key={tag.id}
+                                        className="inline-block px-1.5 py-[1px] rounded-full text-[10px] font-bold [border:1px_solid_var(--border)] bg-[var(--cream)]"
+                                        style={tag.colour ? { background: tag.colour + '22', color: tag.colour, borderColor: tag.colour + '55' } : undefined}
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
+                            </span>
+                        )}
+                    </span>
                     <span>{typeBadge}</span>
                     <span className="text-[13px] font-bold text-right" style={{ color: balanceColor(transaction.amount_cents) }}>
                         {formatCents(transaction.amount_cents)}
@@ -158,6 +186,22 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                         <p className="text-xs text-[var(--text-muted)] italic">
                             Recurring {transaction.recurrence}{transaction.recurrence_end_date ? ` until ${transaction.recurrence_end_date}` : ''}
                         </p>
+                    )}
+                    {transaction.tags && transaction.tags.length > 0 && (
+                        <div>
+                            <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] mb-1">Tags</div>
+                            <div className="flex flex-wrap gap-1">
+                                {transaction.tags.map((tag) => (
+                                    <span
+                                        key={tag.id}
+                                        className="inline-block px-2 py-[2px] rounded-full text-[11px] font-bold [border:1px_solid_var(--border)] bg-[var(--cream)]"
+                                        style={tag.colour ? { background: tag.colour + '22', color: tag.colour, borderColor: tag.colour + '55' } : undefined}
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
                     )}
                     {transaction.notes && (
                         <div>

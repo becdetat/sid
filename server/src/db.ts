@@ -139,6 +139,25 @@ db.exec(`
         WHERE deleted_at IS NULL;
 `);
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT NOT NULL,
+        colour     TEXT,
+        created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+        deleted_at DATETIME
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS tags_name_unique
+        ON tags(LOWER(name)) WHERE deleted_at IS NULL;
+
+    CREATE TABLE IF NOT EXISTS transaction_tags (
+        transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+        tag_id         INTEGER NOT NULL REFERENCES tags(id),
+        PRIMARY KEY (transaction_id, tag_id)
+    );
+`);
+
 // Backfill: transactions with no category get description copied to category
 db.exec(`UPDATE transactions SET category = description WHERE category IS NULL OR category = ''`);
 

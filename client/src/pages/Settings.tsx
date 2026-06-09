@@ -4,6 +4,7 @@ import AccountsSection from '../components/settings/AccountsSection';
 import DashboardSection from '../components/settings/DashboardSection';
 import BudgetsSection from '../components/settings/BudgetsSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
+import TagsSection from '../components/settings/TagsSection';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
@@ -11,6 +12,7 @@ const navItems = [
     { label: 'Accounts', key: 'accounts' },
     { label: 'Dashboard', key: 'dashboard' },
     { label: 'Budgets', key: 'budgets' },
+    { label: 'Tags', key: 'tags' },
     { label: 'Import / Export', key: 'import-export' },
 ] as const;
 
@@ -53,6 +55,7 @@ export default function Settings() {
                     {section === 'accounts' && <AccountsSection />}
                     {section === 'dashboard' && <DashboardSection />}
                     {section === 'budgets' && <BudgetsSection />}
+                    {section === 'tags' && <TagsSection />}
                     {section === 'import-export' && <ImportExportSection />}
                 </div>
             </div>

@@ -11,7 +11,7 @@ function isValidPayload(obj: unknown): obj is BackupPayload {
     if (typeof obj !== 'object' || obj === null) return false;
     const p = obj as Record<string, unknown>;
     return (
-        (p.version === 1 || p.version === 2) &&
+        typeof p.version === 'number' &&
         Array.isArray(p.accounts) &&
         Array.isArray(p.transactions) &&
         Array.isArray(p.attachments)
@@ -63,7 +63,7 @@ router.post('/import', upload.single('file'), (req, res) => {
     }
 
     const version = (payload as Record<string, unknown>).version;
-    if (typeof version !== 'number' || (version !== 1 && version !== 2)) {
+    if (typeof version !== 'number' || version < 1 || version > 4) {
         res.status(422).json({ error: 'Invalid backup: unsupported version' });
         return;
     }

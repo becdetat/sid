@@ -62,6 +62,16 @@ export interface UpdateTileFields {
     show_balance: boolean;
 }
 
+export function updateShowBalance(tileId: number, showBalance: boolean): DashboardConfigItem | null {
+    const result = db
+        .prepare('UPDATE dashboard_config SET show_balance = ? WHERE id = ?')
+        .run(showBalance ? 1 : 0, tileId);
+    if (result.changes === 0) return null;
+    return db
+        .prepare(`${SELECT_SQL} WHERE dc.id = ?`)
+        .get(tileId) as DashboardConfigItem;
+}
+
 export function updateTile(tileId: number, fields: UpdateTileFields): DashboardConfigItem | null {
     const result = db
         .prepare('UPDATE dashboard_config SET account_id = ?, tile_type = ?, time_window = ?, show_balance = ? WHERE id = ?')

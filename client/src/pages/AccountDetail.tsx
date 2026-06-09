@@ -16,6 +16,7 @@ import {
     type TransactionFilters,
 } from '../api/transactions';
 import { getCategories } from '../api/categories';
+import { listTags, bulkTag } from '../api/tags';
 import { downloadImportTemplate } from '../utils/importTemplate';
 import { uploadAttachments } from '../api/attachments';
 import TransactionRow from '../components/TransactionRow';
@@ -134,6 +135,8 @@ export default function AccountDetail() {
     const [amountMax, setAmountMax] = useState('');
     const [filterHasAttachment, setFilterHasAttachment] = useState<'yes' | 'no' | ''>('');
     const [filterRecurringOnly, setFilterRecurringOnly] = useState(false);
+    const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
+    const [filterTagMode, setFilterTagMode] = useState<'any' | 'all'>('any');
     const [activeDefaultViewName, setActiveDefaultViewName] = useState<string | null>(null);
     const defaultAppliedRef = useRef(false);
 
@@ -161,6 +164,8 @@ export default function AccountDetail() {
         amountMax: amountMax || undefined,
         hasAttachment: filterHasAttachment || undefined,
         recurringOnly: filterRecurringOnly || undefined,
+        tagIds: filterTagIds.length > 0 ? filterTagIds : undefined,
+        tagMode: filterTagMode !== 'any' ? filterTagMode : undefined,
     };
     const isFiltered = Object.values(activeFilters).some(Boolean);
 
@@ -175,6 +180,8 @@ export default function AccountDetail() {
         setAmountMax('');
         setFilterHasAttachment('');
         setFilterRecurringOnly(false);
+        setFilterTagIds([]);
+        setFilterTagMode('any');
         setActiveDefaultViewName(null);
     }
 
@@ -189,6 +196,8 @@ export default function AccountDetail() {
         setAmountMax(filters.amountMax ?? '');
         setFilterHasAttachment(filters.hasAttachment ?? '');
         setFilterRecurringOnly(filters.recurringOnly ?? false);
+        setFilterTagIds(Array.isArray(filters.tagIds) ? filters.tagIds : []);
+        setFilterTagMode(filters.tagMode ?? 'any');
         setActiveDefaultViewName(defaultName);
     }
 
@@ -210,7 +219,7 @@ export default function AccountDetail() {
         const def = savedViewsForAccount.find((v) => v.is_default);
         defaultAppliedRef.current = true;
         if (!def) return;
-        if (keyword || filterFrom || filterTo || filterCategory || filterType || amountMin || amountMax || filterHasAttachment || filterRecurringOnly) return;
+        if (keyword || filterFrom || filterTo || filterCategory || filterType || amountMin || amountMax || filterHasAttachment || filterRecurringOnly || filterTagIds.length > 0) return;
         // One-shot default-view application after the saved views load.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         applySavedViewFilters(sanitiseSavedFilters(def.filters), def.name);
@@ -225,6 +234,11 @@ export default function AccountDetail() {
     const { data: categories = [] } = useQuery({
         queryKey: ['categories'],
         queryFn: getCategories,
+    });
+
+    const { data: allTags = [] } = useQuery({
+        queryKey: ['tags'],
+        queryFn: listTags,
     });
 
     const balance = transactions.reduce((sum, t) => sum + t.amount_cents, 0);
@@ -298,6 +312,16 @@ export default function AccountDetail() {
         },
         onError: () => toast.error('Failed to delete transactions.'),
     });
+
+    async function handleBulkTag(add: number[]) {
+        try {
+            await bulkTag([...visibleSelectedIds], add);
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            toast.success('Tags applied.');
+        } catch {
+            toast.error('Failed to apply tags.');
+        }
+    }
 
     async function handleCreate(data: TransactionPayload, pendingFiles: File[], addAnother: boolean) {
         const tx = await createMutation.mutateAsync(data);
@@ -591,6 +615,48 @@ export default function AccountDetail() {
                                 </button>
                             )}
                         </div>
+                        {allTags.length > 0 && (
+                            <div className="pt-3 [border-top:1px_solid_var(--border)]">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Tags</label>
+                                    {filterTagIds.length >= 2 && (
+                                        <div className="flex items-center gap-1 text-xs font-body text-[var(--text-secondary)]">
+                                            <span>Match:</span>
+                                            {(['any', 'all'] as const).map((m) => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => setFilterTagMode(m)}
+                                                    className={`px-2 py-0.5 rounded-full text-xs font-bold border-none cursor-pointer ${filterTagMode === m ? 'bg-[var(--teak)] text-white' : 'bg-[var(--cream)] text-[var(--text-secondary)]'}`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {allTags.map((tag) => {
+                                        const active = filterTagIds.includes(tag.id);
+                                        return (
+                                            <button
+                                                key={tag.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFilterTagIds((prev) =>
+                                                        prev.includes(tag.id) ? prev.filter((id) => id !== tag.id) : [...prev, tag.id],
+                                                    );
+                                                }}
+                                                className={`px-2 py-[2px] rounded-full text-[11px] font-bold [border:1.5px_solid_var(--border)] cursor-pointer transition-all ${active ? 'bg-[var(--teak)] text-white border-[var(--teak)]' : 'bg-[var(--cream)] text-[var(--text-secondary)]'}`}
+                                                style={active || !tag.colour ? undefined : { borderColor: tag.colour + '55', color: tag.colour, background: tag.colour + '22' }}
+                                            >
+                                                {tag.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -600,6 +666,8 @@ export default function AccountDetail() {
                 onDelete={() => setModal({ type: 'bulk-delete' })}
                 onExport={handleBulkExport}
                 onClear={handleClearSelection}
+                availableTags={allTags}
+                onBulkTag={handleBulkTag}
             />
 
             {txLoading && (

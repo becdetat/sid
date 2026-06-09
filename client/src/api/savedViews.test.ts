@@ -31,11 +31,11 @@ describe('sanitiseSavedFilters', () => {
         const result = sanitiseSavedFilters({
             keyword: 'hi',
             futureKnob: 'on',
-            tagIds: [1, 2],
+            futureWidget: 'xyz',
         }) as Record<string, unknown>;
         expect(result.keyword).toBe('hi');
         expect(result.futureKnob).toBeUndefined();
-        expect(result.tagIds).toBeUndefined();
+        expect(result.futureWidget).toBeUndefined();
     });
 
     it('returns an empty object when given empty input', () => {

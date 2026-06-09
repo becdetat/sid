@@ -12,6 +12,7 @@ export default defineConfig(() => ({
         proxy: {
             '/api': 'http://localhost:3000',
         },
+        allowedHosts: ['seagull']
     },
     test: {
         environment: 'happy-dom',

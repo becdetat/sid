@@ -57,6 +57,19 @@ export interface BackupSavedView {
     deleted_at: string | null;
 }
 
+export interface BackupTag {
+    id: number;
+    name: string;
+    colour: string | null;
+    created_at: string;
+    deleted_at: string | null;
+}
+
+export interface BackupTransactionTag {
+    transaction_id: number;
+    tag_id: number;
+}
+
 export interface BackupPayload {
     version: number;
     exported_at: string;
@@ -65,6 +78,8 @@ export interface BackupPayload {
     attachments: BackupAttachment[];
     budgets: BackupBudget[];
     saved_views?: BackupSavedView[];
+    tags?: BackupTag[];
+    transaction_tags?: BackupTransactionTag[];
 }
 
 export interface ImportResult {
@@ -73,4 +88,5 @@ export interface ImportResult {
     attachments: number;
     budgets: number;
     saved_views: number;
+    tags: number;
 }

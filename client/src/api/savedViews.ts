@@ -66,6 +66,8 @@ const KNOWN_FILTER_KEYS = new Set([
     'amountMax',
     'hasAttachment',
     'recurringOnly',
+    'tagIds',
+    'tagMode',
 ]);
 
 // Strip unknown keys so a client that's older than the saved view doesn't apply garbage.

@@ -7,7 +7,9 @@ import './db';
 import { generateDueOccurrences } from './recurrence/service';
 import accountRoutes from './accounts/routes';
 import transactionRoutes from './transactions/routes';
-import transactionSearchRoutes from './transactions/searchRoutes';
+import transactionSearchRoutes, { bulkTagRouter } from './transactions/searchRoutes';
+import tagRoutes from './tags/routes';
+import reportRoutes from './reports/routes';
 import { txAttachmentRouter, attachmentRouter } from './attachments/routes';
 import dashboardRoutes from './dashboard/routes';
 import dashboardConfigRoutes from './dashboard-config/routes';
@@ -30,7 +32,10 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
 
+app.use('/api/transactions/bulk-tag', bulkTagRouter);
 app.use('/api/transactions/search', transactionSearchRoutes);
+app.use('/api/tags', tagRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/saved-views', savedViewRoutes);
 app.use('/api/backup', backupExportRoutes);
 app.use('/api/backup', backupImportRoutes);

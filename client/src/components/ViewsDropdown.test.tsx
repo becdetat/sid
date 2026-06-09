@@ -80,7 +80,7 @@ describe('ViewsDropdown', () => {
         const onApply = vi.fn();
         vi.mocked(svApi.listSavedViews).mockImplementation(async (opts) =>
             opts?.scope === 'account'
-                ? [view({ id: 6, name: 'Future view', filters: { type: 'expense', futureKnob: 'on', tagIds: [1, 2] } })]
+                ? [view({ id: 6, name: 'Future view', filters: { type: 'expense', futureKnob: 'on', futureWidget: 'xyz' } })]
                 : [],
         );
         renderDropdown({ onApply });

@@ -1,5 +1,11 @@
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly';
 
+export interface TagRef {
+    id: number;
+    name: string;
+    colour: string | null;
+}
+
 export interface Transaction {
     id: number;
     account_id: number;
@@ -15,4 +21,5 @@ export interface Transaction {
     recurrence: RecurrenceFrequency | null;
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
+    tags: TagRef[];
 }
