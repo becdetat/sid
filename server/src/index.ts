@@ -21,6 +21,7 @@ import backupImportRoutes from './backup/importRoutes';
 import chartRoutes from './chart/routes';
 import budgetRoutes from './budgets/routes';
 import savedViewRoutes from './saved-views/routes';
+import transferRoutes from './transfers/routes';
 
 const app = express();
 const PORT = 3000;
@@ -32,6 +33,7 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
 
+app.use('/api/transfers', transferRoutes);
 app.use('/api/transactions/bulk-tag', bulkTagRouter);
 app.use('/api/transactions/search', transactionSearchRoutes);
 app.use('/api/tags', tagRoutes);

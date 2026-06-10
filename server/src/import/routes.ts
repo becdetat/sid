@@ -64,6 +64,7 @@ router.post('/', upload.single('file'), (req, res) => {
                 type: row.type,
                 date: row.date,
                 notes: row.notes ?? undefined,
+                transfer_group_id: row.transfer_group_id ?? undefined,
             });
         }
     });

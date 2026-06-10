@@ -116,7 +116,7 @@ export function getIncomeVsExpenseByMonth(accountId: number, fromDate: string | 
               .prepare(
                   `SELECT strftime('%Y-%m', date) as month, type, SUM(amount_cents) as total_cents
                    FROM transactions
-                   WHERE account_id = ? AND deleted_at IS NULL AND date >= ?
+                   WHERE account_id = ? AND deleted_at IS NULL AND type != 'transfer' AND date >= ?
                    GROUP BY month, type
                    ORDER BY month`,
               )
@@ -125,7 +125,7 @@ export function getIncomeVsExpenseByMonth(accountId: number, fromDate: string | 
               .prepare(
                   `SELECT strftime('%Y-%m', date) as month, type, SUM(amount_cents) as total_cents
                    FROM transactions
-                   WHERE account_id = ? AND deleted_at IS NULL
+                   WHERE account_id = ? AND deleted_at IS NULL AND type != 'transfer'
                    GROUP BY month, type
                    ORDER BY month`,
               )

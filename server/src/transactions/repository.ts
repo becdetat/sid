@@ -9,7 +9,7 @@ export interface Transaction {
     category: string | null;
     description: string;
     amount_cents: number;
-    type: 'income' | 'expense';
+    type: 'income' | 'expense' | 'transfer';
     date: string;
     notes: string | null;
     created_at: string;
@@ -18,6 +18,7 @@ export interface Transaction {
     recurrence: RecurrenceFrequency | null;
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
+    transfer_group_id: string | null;
     tags: TagRef[];
 }
 
@@ -26,11 +27,12 @@ export interface CreateTransactionInput {
     category?: string;
     description: string;
     amount: number;
-    type: 'income' | 'expense';
+    type: 'income' | 'expense' | 'transfer';
     date: string;
     notes?: string;
     recurrence?: RecurrenceFrequency;
     recurrence_end_date?: string;
+    transfer_group_id?: string;
 }
 
 export interface UpdateTransactionInput {
@@ -175,11 +177,13 @@ export function findById(id: number): Transaction | undefined {
 }
 
 export function create(input: CreateTransactionInput): Transaction {
-    const amount_cents = toAmountCents(input.amount, input.type);
+    const amount_cents = input.type === 'transfer'
+        ? Math.round(Math.abs(input.amount) * 100)
+        : toAmountCents(input.amount, input.type);
     const result = db
         .prepare(
-            `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, recurrence, recurrence_end_date)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, recurrence, recurrence_end_date, transfer_group_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
             input.account_id,
@@ -191,6 +195,7 @@ export function create(input: CreateTransactionInput): Transaction {
             input.notes ?? null,
             input.recurrence ?? null,
             input.recurrence_end_date ?? null,
+            input.transfer_group_id ?? null,
         );
     return findById(result.lastInsertRowid as number)!;
 }
@@ -202,7 +207,9 @@ export function update(id: number, input: UpdateTransactionInput): Transaction |
     const newType = input.type ?? existing.type;
     const newAmount =
         input.amount !== undefined ? input.amount : Math.abs(existing.amount_cents) / 100;
-    const amount_cents = toAmountCents(newAmount, newType);
+    const amount_cents = newType === 'transfer'
+        ? (existing.amount_cents < 0 ? -Math.round(newAmount * 100) : Math.round(newAmount * 100))
+        : toAmountCents(newAmount, newType);
 
     db.prepare(
         `UPDATE transactions

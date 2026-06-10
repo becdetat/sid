@@ -158,6 +158,55 @@ db.exec(`
     );
 `);
 
+// One-shot migration: widen type CHECK to include 'transfer' and add transfer_group_id.
+// SQLite cannot ALTER a CHECK constraint, so we use the table-rename pattern.
+{
+    const cols = (db.prepare('PRAGMA table_info(transactions)').all() as { name: string }[]).map((c) => c.name);
+    if (!cols.includes('transfer_group_id')) {
+        db.pragma('foreign_keys = OFF');
+        db.exec(`
+            BEGIN TRANSACTION;
+
+            CREATE TABLE transactions_new (
+                id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id           INTEGER NOT NULL REFERENCES accounts(id),
+                description          TEXT NOT NULL,
+                amount_cents         INTEGER NOT NULL,
+                type                 TEXT NOT NULL CHECK(type IN ('income', 'expense', 'transfer')),
+                date                 DATE NOT NULL,
+                notes                TEXT,
+                created_at           DATETIME NOT NULL DEFAULT (datetime('now')),
+                updated_at           DATETIME NOT NULL DEFAULT (datetime('now')),
+                deleted_at           DATETIME,
+                category             TEXT,
+                recurrence           TEXT CHECK(recurrence IN ('daily','weekly','fortnightly','monthly','yearly') OR recurrence IS NULL),
+                recurrence_end_date  DATE,
+                recurrence_source_id INTEGER REFERENCES transactions_new(id),
+                transfer_group_id    TEXT
+            );
+
+            INSERT INTO transactions_new
+                (id, account_id, description, amount_cents, type, date, notes,
+                 created_at, updated_at, deleted_at, category, recurrence,
+                 recurrence_end_date, recurrence_source_id, transfer_group_id)
+            SELECT id, account_id, description, amount_cents, type, date, notes,
+                   created_at, updated_at, deleted_at, category, recurrence,
+                   recurrence_end_date, recurrence_source_id, NULL
+            FROM transactions;
+
+            DROP TABLE transactions;
+
+            ALTER TABLE transactions_new RENAME TO transactions;
+
+            CREATE INDEX IF NOT EXISTS transactions_transfer_group_id
+                ON transactions(transfer_group_id) WHERE transfer_group_id IS NOT NULL;
+
+            COMMIT;
+        `);
+        db.pragma('foreign_keys = ON');
+    }
+}
+
 // Backfill: transactions with no category get description copied to category
 db.exec(`UPDATE transactions SET category = description WHERE category IS NULL OR category = ''`);
 

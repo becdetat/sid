@@ -43,10 +43,20 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
         enabled: expanded,
     });
 
+    const isTransfer = transaction.type === 'transfer';
     const isTemplate = !!transaction.recurrence && !transaction.recurrence_source_id;
     const isGenerated = !!transaction.recurrence_source_id;
 
-    const typeBadge = (
+    const typeBadge = isTransfer ? (
+        <span className="flex items-center gap-1">
+            <span className="inline-block px-2 py-[3px] rounded-full text-[11px] font-bold bg-[var(--cream-mid)] text-[var(--text-muted)]">
+                ↔ transfer
+            </span>
+            {(isTemplate || isGenerated) && (
+                <span title={isGenerated ? 'Auto-generated' : 'Recurring template'} className="text-[var(--text-muted)] text-[13px] leading-none">↻</span>
+            )}
+        </span>
+    ) : (
         <span className="flex items-center gap-1">
             <span className={`inline-block px-2 py-[3px] rounded-full text-[11px] font-bold ${isIncome ? 'bg-[var(--green-light)] text-[var(--green)]' : 'bg-[var(--red-light)] text-[var(--red)]'}`}>
                 {transaction.type}
@@ -179,6 +189,12 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
             {/* Expanded detail panel */}
             {expanded && (
                 <div className="px-4 sm:px-5 py-4 bg-[var(--cream)] flex flex-col gap-3">
+                    {isTransfer && transaction.transfer_group_id && (
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Transfer pair: <span className="font-mono">{transaction.transfer_group_id}</span>
+                            {transaction.amount_cents < 0 ? ' (outgoing)' : ' (incoming)'}
+                        </p>
+                    )}
                     {isGenerated && (
                         <p className="text-xs text-[var(--text-muted)] italic">Auto-generated from recurring transaction</p>
                     )}

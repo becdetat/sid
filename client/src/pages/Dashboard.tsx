@@ -10,10 +10,12 @@ import BudgetProgressTile from '../components/BudgetProgressTile';
 import AccountForm from '../components/AccountForm';
 import SkeletonCard from '../components/SkeletonCard';
 import TransactionForm from '../components/TransactionForm';
+import TransferForm from '../components/TransferForm';
 import { getDashboard } from '../api/dashboard';
 import { getDashboardConfig } from '../api/dashboardConfig';
 import { createAccount, listAccountsWithBalances } from '../api/accounts';
 import { createTransaction, type TransactionPayload } from '../api/transactions';
+import { createTransfer, type TransferPayload } from '../api/transfers';
 import { uploadAttachments } from '../api/attachments';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
@@ -23,6 +25,7 @@ type Modal =
     | { type: 'create' }
     | { type: 'add-transaction'; account: DashboardAccount }
     | { type: 'add-transaction-global' }
+    | { type: 'add-transfer' }
     | null;
 
 export default function Dashboard() {
@@ -64,6 +67,17 @@ export default function Dashboard() {
         mutationFn: ({ accountId, data }: { accountId: number; data: TransactionPayload }) =>
             createTransaction(accountId, data),
         onError: () => toast.error('Failed to add transaction.'),
+    });
+
+    const addTransferMutation = useMutation({
+        mutationFn: (payload: TransferPayload) => createTransfer(payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
+            setModal(null);
+            toast.success('Transfer created.');
+        },
+        onError: () => toast.error('Failed to create transfer.'),
     });
 
     async function handleAddTransaction(data: TransactionPayload, pendingFiles: File[], addAnother: boolean) {
@@ -150,9 +164,14 @@ export default function Dashboard() {
                 <>
                     <div className="flex justify-between items-center mb-2">
                         <PageLink to="/accounts">All accounts → </PageLink>
-                        <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'add-transaction-global' })}>
-                            New transaction
-                        </button>
+                        <div className="flex gap-2">
+                            <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={() => setModal({ type: 'add-transfer' })}>
+                                ↔ New transfer
+                            </button>
+                            <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'add-transaction-global' })}>
+                                New transaction
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-5">
                         {tileConfig.map((tile) => {
@@ -239,6 +258,13 @@ export default function Dashboard() {
                     accounts={allAccountsWithBalances}
                     initialAccountId={lastGlobalAccountId}
                     onSubmit={handleAddTransactionGlobal}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'add-transfer' && (
+                <TransferForm
+                    accounts={allAccountsWithBalances}
+                    onSubmit={(payload) => addTransferMutation.mutate(payload)}
                     onCancel={() => setModal(null)}
                 />
             )}

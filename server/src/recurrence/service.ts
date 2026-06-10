@@ -1,4 +1,5 @@
 import db from '../db';
+import { generateTransferGroupId } from '../transfers/repository';
 
 type Frequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly';
 
@@ -12,6 +13,7 @@ interface TemplateRow {
     notes: string | null;
     recurrence: Frequency;
     recurrence_end_date: string | null;
+    transfer_group_id: string | null;
 }
 
 export function getNextDate(dateStr: string, frequency: Frequency): string {
@@ -60,7 +62,7 @@ export function generateDueOccurrences(): void {
 
     const templates = db
         .prepare(
-            `SELECT id, account_id, category, description, amount_cents, type, notes, recurrence, recurrence_end_date
+            `SELECT id, account_id, category, description, amount_cents, type, notes, recurrence, recurrence_end_date, transfer_group_id
              FROM transactions
              WHERE recurrence IS NOT NULL AND recurrence_source_id IS NULL AND deleted_at IS NULL`,
         )
@@ -69,6 +71,11 @@ export function generateDueOccurrences(): void {
     const insertStmt = db.prepare(
         `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, recurrence_source_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+
+    const insertTransferStmt = db.prepare(
+        `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, transfer_group_id, recurrence_source_id)
+         VALUES (?, ?, ?, ?, 'transfer', ?, ?, ?, ?)`,
     );
 
     const run = db.transaction(() => {
@@ -87,20 +94,42 @@ export function generateDueOccurrences(): void {
                 ? tmpl.recurrence_end_date
                 : todayStr;
 
-            let next = getNextDate(lastDate, tmpl.recurrence);
-            while (next <= ceiling) {
-                insertStmt.run(
-                    tmpl.account_id,
-                    tmpl.category,
-                    tmpl.description,
-                    tmpl.amount_cents,
-                    tmpl.type,
-                    next,
-                    tmpl.notes,
-                    tmpl.id,
-                );
-                lastDate = next;
-                next = getNextDate(lastDate, tmpl.recurrence);
+            if (tmpl.type === 'transfer' && tmpl.transfer_group_id) {
+                // Find the destination partner template
+                const destTmpl = db
+                    .prepare(
+                        `SELECT id, account_id, category, description, amount_cents, notes
+                         FROM transactions
+                         WHERE transfer_group_id = ? AND id != ? AND deleted_at IS NULL AND recurrence_source_id IS NULL`,
+                    )
+                    .get(tmpl.transfer_group_id, tmpl.id) as Pick<TemplateRow, 'id' | 'account_id' | 'category' | 'description' | 'amount_cents' | 'notes'> | undefined;
+
+                if (!destTmpl) continue;
+
+                let next = getNextDate(lastDate, tmpl.recurrence);
+                while (next <= ceiling) {
+                    const newGroupId = generateTransferGroupId();
+                    insertTransferStmt.run(tmpl.account_id, tmpl.category, tmpl.description, tmpl.amount_cents, next, tmpl.notes, newGroupId, tmpl.id);
+                    insertTransferStmt.run(destTmpl.account_id, destTmpl.category, destTmpl.description, destTmpl.amount_cents, next, destTmpl.notes, newGroupId, tmpl.id);
+                    lastDate = next;
+                    next = getNextDate(lastDate, tmpl.recurrence);
+                }
+            } else {
+                let next = getNextDate(lastDate, tmpl.recurrence);
+                while (next <= ceiling) {
+                    insertStmt.run(
+                        tmpl.account_id,
+                        tmpl.category,
+                        tmpl.description,
+                        tmpl.amount_cents,
+                        tmpl.type,
+                        next,
+                        tmpl.notes,
+                        tmpl.id,
+                    );
+                    lastDate = next;
+                    next = getNextDate(lastDate, tmpl.recurrence);
+                }
             }
         }
     });

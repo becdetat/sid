@@ -9,7 +9,7 @@ function formatTimestamp(d: Date): string {
 export function exportAll(): BackupPayload {
     const accounts = db.prepare(`SELECT id, name, created_at, deleted_at FROM accounts ORDER BY id`).all() as BackupAccount[];
 
-    const transactions = db.prepare(`SELECT id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id FROM transactions ORDER BY id`).all() as BackupTransaction[];
+    const transactions = db.prepare(`SELECT id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id, transfer_group_id FROM transactions ORDER BY id`).all() as BackupTransaction[];
 
     const rawAttachments = db.prepare(`SELECT id, transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at FROM attachments ORDER BY id`).all() as (Omit<BackupAttachment, 'data'> & { data: Buffer })[];
 
@@ -41,7 +41,7 @@ export function exportAll(): BackupPayload {
 
 export function importMerge(payload: BackupPayload): ImportResult {
     const insertAccount = db.prepare(`INSERT INTO accounts (name, created_at, deleted_at) VALUES (?, ?, ?)`);
-    const insertTransaction = db.prepare(`INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const insertTransaction = db.prepare(`INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, transfer_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const updateRecurrenceSource = db.prepare(`UPDATE transactions SET recurrence_source_id = ? WHERE id = ?`);
     const insertAttachment = db.prepare(`INSERT INTO attachments (transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
     const findActiveByName = db.prepare(`SELECT id FROM accounts WHERE lower(name) = lower(?) AND deleted_at IS NULL`);
@@ -73,7 +73,7 @@ export function importMerge(payload: BackupPayload): ImportResult {
             const result = insertTransaction.run(
                 newAccountId, tx.category, tx.description, tx.amount_cents,
                 tx.type, tx.date, tx.notes, tx.created_at, tx.updated_at, tx.deleted_at,
-                tx.recurrence ?? null, tx.recurrence_end_date ?? null,
+                tx.recurrence ?? null, tx.recurrence_end_date ?? null, tx.transfer_group_id ?? null,
             );
             transactionIdMap.set(tx.id, result.lastInsertRowid as number);
         }
@@ -200,7 +200,7 @@ export function importMerge(payload: BackupPayload): ImportResult {
 
 export function importWipe(payload: BackupPayload): ImportResult {
     const insertAccount = db.prepare(`INSERT INTO accounts (id, name, created_at, deleted_at) VALUES (?, ?, ?, ?)`);
-    const insertTransaction = db.prepare(`INSERT INTO transactions (id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const insertTransaction = db.prepare(`INSERT INTO transactions (id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id, transfer_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const insertAttachment = db.prepare(`INSERT INTO attachments (id, transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 
     const run = db.transaction((p: BackupPayload) => {
@@ -228,6 +228,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
                 tx.id, tx.account_id, tx.category, tx.description, tx.amount_cents,
                 tx.type, tx.date, tx.notes, tx.created_at, tx.updated_at, tx.deleted_at,
                 tx.recurrence ?? null, tx.recurrence_end_date ?? null, tx.recurrence_source_id ?? null,
+                tx.transfer_group_id ?? null,
             );
         }
 

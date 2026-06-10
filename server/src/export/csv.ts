@@ -5,6 +5,7 @@ interface ExportRow {
     type: string;
     amount_cents: number;
     notes: string | null;
+    transfer_group_id?: string | null;
 }
 
 function escapeField(value: string): string {
@@ -15,7 +16,7 @@ function escapeField(value: string): string {
 }
 
 export function toCSV(rows: ExportRow[]): string {
-    const header = 'Date,Category,Description,Type,Amount,Notes';
+    const header = 'Date,Category,Description,Type,Amount,Notes,TransferGroupId';
     const lines = rows.map((r) => {
         const amount = (Math.abs(r.amount_cents) / 100).toFixed(2);
         return [
@@ -25,6 +26,7 @@ export function toCSV(rows: ExportRow[]): string {
             r.type,
             amount,
             escapeField(r.notes ?? ''),
+            r.transfer_group_id ?? '',
         ].join(',');
     });
     return [header, ...lines].join('\n');

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getAccount } from '../api/accounts';
+import { getAccount, listAccountsWithBalances } from '../api/accounts';
 import {
     listTransactions,
     createTransaction,
@@ -15,6 +15,7 @@ import {
     type TransactionPayload,
     type TransactionFilters,
 } from '../api/transactions';
+import { createTransfer, updateTransfer, deleteTransfer, getTransfer, type TransferPayload, type TransferPair } from '../api/transfers';
 import { getCategories } from '../api/categories';
 import { listTags, bulkTag } from '../api/tags';
 import { downloadImportTemplate } from '../utils/importTemplate';
@@ -24,6 +25,7 @@ import BulkActionBar from '../components/BulkActionBar';
 import ViewsDropdown from '../components/ViewsDropdown';
 import { listSavedViews, sanitiseSavedFilters } from '../api/savedViews';
 import TransactionForm from '../components/TransactionForm';
+import TransferForm from '../components/TransferForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import DateFormatPickerDialog from '../components/DateFormatPickerDialog';
@@ -33,10 +35,13 @@ import PageLink from '../components/PageLink';
 
 type Modal =
     | { type: 'create' }
+    | { type: 'add-transfer' }
     | { type: 'edit-scope'; transaction: Transaction }
     | { type: 'edit'; transaction: Transaction; scope?: 'one' | 'future' }
+    | { type: 'edit-transfer'; transaction: Transaction }
     | { type: 'delete-scope'; transaction: Transaction }
     | { type: 'delete'; transaction: Transaction }
+    | { type: 'delete-transfer'; transaction: Transaction }
     | { type: 'bulk-delete' }
     | { type: 'date-format-picker'; file: File }
     | { type: 'import-errors'; errors: { row: number; error: string }[] }
@@ -120,6 +125,7 @@ export default function AccountDetail() {
     const fromAllAccounts = locationState?.from === 'all-accounts';
     const queryClient = useQueryClient();
     const [modal, setModal] = useState<Modal>(null);
+    const [editingTransferPair, setEditingTransferPair] = useState<TransferPair | null>(null);
     const [createFormKey, setCreateFormKey] = useState(0);
     const [isImporting, setIsImporting] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -204,6 +210,11 @@ export default function AccountDetail() {
     const { data: account, isLoading: accountLoading } = useQuery({
         queryKey: ['accounts', accountId],
         queryFn: () => getAccount(accountId),
+    });
+
+    const { data: allAccounts = [] } = useQuery({
+        queryKey: ['accounts-balances'],
+        queryFn: listAccountsWithBalances,
     });
 
     const { data: savedViewsForAccount } = useQuery({
@@ -311,6 +322,40 @@ export default function AccountDetail() {
             toast.success('Transactions deleted.');
         },
         onError: () => toast.error('Failed to delete transactions.'),
+    });
+
+    const createTransferMutation = useMutation({
+        mutationFn: (payload: TransferPayload) => createTransfer(payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
+            setModal(null);
+            toast.success('Transfer created.');
+        },
+        onError: () => toast.error('Failed to create transfer.'),
+    });
+
+    const updateTransferMutation = useMutation({
+        mutationFn: ({ groupId, payload }: { groupId: string; payload: Partial<TransferPayload> }) =>
+            updateTransfer(groupId, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
+            setModal(null);
+            toast.success('Transfer updated.');
+        },
+        onError: () => toast.error('Failed to update transfer.'),
+    });
+
+    const deleteTransferMutation = useMutation({
+        mutationFn: (groupId: string) => deleteTransfer(groupId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            queryClient.invalidateQueries({ queryKey: ['accounts-balances'] });
+            setModal(null);
+            toast.success('Transfer deleted.');
+        },
+        onError: () => toast.error('Failed to delete transfer.'),
     });
 
     async function handleBulkTag(add: number[]) {
@@ -454,6 +499,9 @@ export default function AccountDetail() {
                     onExportCsv={handleExportCsv}
                     isImporting={isImporting}
                 />
+                <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={() => setModal({ type: 'add-transfer' })}>
+                    ↔ New transfer
+                </button>
                 <button className="sid-btn sid-btn-primary sid-btn-sm" onClick={() => setModal({ type: 'create' })}>
                     + New transaction
                 </button>
@@ -724,14 +772,21 @@ export default function AccountDetail() {
                             gridTemplate={TX_GRID}
                             initialExpanded={expandTxId === t.id}
                             onEdit={(tx) => {
-                                if (tx.recurrence || tx.recurrence_source_id) {
+                                if (tx.transfer_group_id) {
+                                    getTransfer(tx.transfer_group_id).then((pair) => {
+                                        setEditingTransferPair(pair);
+                                        setModal({ type: 'edit-transfer', transaction: tx });
+                                    }).catch(() => toast.error('Failed to load transfer.'));
+                                } else if (tx.recurrence || tx.recurrence_source_id) {
                                     setModal({ type: 'edit-scope', transaction: tx });
                                 } else {
                                     setModal({ type: 'edit', transaction: tx });
                                 }
                             }}
                             onDelete={(tx) => {
-                                if (tx.recurrence || tx.recurrence_source_id) {
+                                if (tx.transfer_group_id) {
+                                    setModal({ type: 'delete-transfer', transaction: tx });
+                                } else if (tx.recurrence || tx.recurrence_source_id) {
                                     setModal({ type: 'delete-scope', transaction: tx });
                                 } else {
                                     setModal({ type: 'delete', transaction: tx });
@@ -748,6 +803,33 @@ export default function AccountDetail() {
                 <TransactionForm
                     key={createFormKey}
                     onSubmit={handleCreate}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'add-transfer' && (
+                <TransferForm
+                    accounts={allAccounts}
+                    onSubmit={(payload) => createTransferMutation.mutate(payload)}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'edit-transfer' && modal.transaction.transfer_group_id && editingTransferPair && (
+                <TransferForm
+                    accounts={allAccounts}
+                    initial={{
+                        groupId: modal.transaction.transfer_group_id,
+                        source: editingTransferPair.source,
+                        destination: editingTransferPair.destination,
+                    }}
+                    onSubmit={(payload) => updateTransferMutation.mutate({ groupId: modal.transaction.transfer_group_id!, payload })}
+                    onCancel={() => { setModal(null); setEditingTransferPair(null); }}
+                />
+            )}
+            {modal?.type === 'delete-transfer' && modal.transaction.transfer_group_id && (
+                <ConfirmDialog
+                    message="Delete this transfer pair? Both the outgoing and incoming transactions will be deleted."
+                    confirmLabel="Delete transfer"
+                    onConfirm={() => deleteTransferMutation.mutate(modal.transaction.transfer_group_id!)}
                     onCancel={() => setModal(null)}
                 />
             )}

@@ -2,9 +2,10 @@ export interface ImportRow {
     date: string;
     category: string;
     description: string;
-    type: 'income' | 'expense';
+    type: 'income' | 'expense' | 'transfer';
     amount: number;
     notes: string | null;
+    transfer_group_id: string | null;
 }
 
 export interface RowError {
@@ -165,6 +166,7 @@ export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat): ParseRe
         const typeRaw = (rec[col['type']] ?? '').trim().toLowerCase();
         const amountRaw = (rec[col['amount']] ?? '').trim();
         const notes = (rec[col['notes']] ?? '').trim();
+        const transferGroupId = col['transfergroupid'] !== undefined ? (rec[col['transfergroupid']] ?? '').trim() : '';
 
         let rowHasError = false;
 
@@ -187,8 +189,12 @@ export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat): ParseRe
             rowHasError = true;
         }
 
-        if (typeRaw !== 'income' && typeRaw !== 'expense') {
-            errors.push({ row: rowNum, error: `Row ${rowNum}: type must be 'income' or 'expense'` });
+        if (typeRaw !== 'income' && typeRaw !== 'expense' && typeRaw !== 'transfer') {
+            errors.push({ row: rowNum, error: `Row ${rowNum}: type must be 'income', 'expense', or 'transfer'` });
+            rowHasError = true;
+        }
+        if (typeRaw === 'transfer' && !transferGroupId) {
+            errors.push({ row: rowNum, error: `Row ${rowNum}: transfer rows must have a TransferGroupId` });
             rowHasError = true;
         }
 
@@ -210,9 +216,10 @@ export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat): ParseRe
                 date,
                 category,
                 description,
-                type: typeRaw as 'income' | 'expense',
+                type: typeRaw as 'income' | 'expense' | 'transfer',
                 amount: parseFloat(amountRaw),
                 notes: notes || null,
+                transfer_group_id: transferGroupId || null,
             });
         }
     }

@@ -11,7 +11,7 @@ export interface BackupTransaction {
     category: string | null;
     description: string;
     amount_cents: number;
-    type: 'income' | 'expense';
+    type: 'income' | 'expense' | 'transfer';
     date: string;
     notes: string | null;
     created_at: string;
@@ -20,6 +20,7 @@ export interface BackupTransaction {
     recurrence: string | null;
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
+    transfer_group_id: string | null;
 }
 
 export interface BackupAttachment {

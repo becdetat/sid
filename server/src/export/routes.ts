@@ -33,6 +33,7 @@ router.get('/', (req, res) => {
         type: t.type,
         amount_cents: t.amount_cents,
         notes: t.notes,
+        transfer_group_id: t.transfer_group_id,
     })).reverse();
 
     const csv = toCSV(rows);
@@ -67,6 +68,7 @@ router.post('/bulk', (req, res) => {
         type: t.type,
         amount_cents: t.amount_cents,
         notes: t.notes,
+        transfer_group_id: t.transfer_group_id,
     }));
 
     const csv = toCSV(rows);

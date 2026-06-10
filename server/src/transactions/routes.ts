@@ -132,6 +132,11 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
         return;
     }
 
+    if (existing.transfer_group_id) {
+        res.status(409).json({ error: 'Cannot edit a transfer transaction directly. Use PUT /api/transfers/:groupId instead.' });
+        return;
+    }
+
     const { category, description, amount, type, date, notes, account_id, recurrence, recurrence_end_date, scope, tag_ids } = req.body as {
         category?: string | null;
         description?: string;
@@ -251,6 +256,11 @@ router.delete<{ accountId: string; id: string }>('/:id', (req, res) => {
     const existing = repo.findById(id);
     if (!existing || existing.account_id !== accountId) {
         res.status(404).json({ error: 'transaction not found' });
+        return;
+    }
+
+    if (existing.transfer_group_id) {
+        res.status(409).json({ error: 'Cannot delete one side of a transfer. Use DELETE /api/transfers/:groupId to delete the pair.' });
         return;
     }
 
