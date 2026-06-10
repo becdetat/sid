@@ -2,6 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+    DndContext,
+    DragOverlay,
+    PointerSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+    arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
     getDashboardConfig,
     addToDashboard,
     removeFromDashboard,
@@ -77,6 +94,17 @@ const XIcon = () => (
 const EditIcon = () => (
     <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
         <path d="M13.586 3.586a2 2 0 112.828 2.828l-9 9A2 2 0 016 16H4a1 1 0 01-1-1v-2a2 2 0 01.586-1.414l9-9z" />
+    </svg>
+);
+
+const GripDotsIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <circle cx="5" cy="3.5" r="1.5" />
+        <circle cx="11" cy="3.5" r="1.5" />
+        <circle cx="5" cy="8" r="1.5" />
+        <circle cx="11" cy="8" r="1.5" />
+        <circle cx="5" cy="12.5" r="1.5" />
+        <circle cx="11" cy="12.5" r="1.5" />
     </svg>
 );
 
@@ -261,6 +289,97 @@ function EditTileModal({ tile, accounts, onSave, onCancel }: EditModalProps) {
     );
 }
 
+interface SortableRowProps {
+    item: DashboardConfigItem;
+    index: number;
+    totalCount: number;
+    label: string;
+    showGrip: boolean;
+    onEdit: () => void;
+    onMove: (direction: 'up' | 'down') => void;
+    onRemove: () => void;
+    onShowBalanceChange: (showBalance: boolean) => void;
+}
+
+function SortableRow({ item, index, totalCount, label, showGrip, onEdit, onMove, onRemove, onShowBalanceChange }: SortableRowProps) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0 : undefined,
+    };
+
+    return (
+        <tr ref={setNodeRef} style={style} className="border-b border-[var(--cream-mid)]">
+            <td className="p-3 w-8">
+                {showGrip && (
+                    <span
+                        className="cursor-grab text-[var(--text-muted)] hover:text-[var(--text-primary)] touch-none select-none flex items-center"
+                        aria-label="Drag to reorder"
+                        {...listeners}
+                        {...attributes}
+                    >
+                        <GripDotsIcon />
+                    </span>
+                )}
+            </td>
+            <td className="p-3 text-sm font-semibold text-[var(--text-primary)] font-body">
+                <span>{label}</span>
+                {(item.tile_type === 'transactions' || item.tile_type === 'balance_over_time') && (
+                    <label className="ml-3 inline-flex items-center gap-1.5 text-xs font-normal text-[var(--text-muted)] cursor-pointer">
+                        <input
+                            type="checkbox"
+                            aria-label="Show balance"
+                            checked={item.show_balance}
+                            onChange={(e) => onShowBalanceChange(e.target.checked)}
+                        />
+                        Show balance
+                    </label>
+                )}
+            </td>
+            <td className="p-3 pl-0">
+                <div className="flex gap-0.5 justify-end">
+                    <button
+                        aria-label={`Edit ${label}`}
+                        className="sid-icon-btn"
+                        onClick={onEdit}
+                        title="Edit"
+                    >
+                        <EditIcon />
+                    </button>
+                    <button
+                        aria-label={`Move ${label} up`}
+                        className="sid-icon-btn"
+                        onClick={() => onMove('up')}
+                        disabled={index === 0}
+                        title="Move up"
+                    >
+                        <ChevronUpIcon />
+                    </button>
+                    <button
+                        aria-label={`Move ${label} down`}
+                        className="sid-icon-btn"
+                        onClick={() => onMove('down')}
+                        disabled={index === totalCount - 1}
+                        title="Move down"
+                    >
+                        <ChevronDownIcon />
+                    </button>
+                    <button
+                        aria-label={`Remove ${label} from dashboard`}
+                        className="sid-icon-btn danger"
+                        onClick={onRemove}
+                        title="Remove from dashboard"
+                    >
+                        <XIcon />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+}
+
 export default function DashboardSection() {
     const queryClient = useQueryClient();
 
@@ -269,11 +388,17 @@ export default function DashboardSection() {
     const [addWindowOption, setAddWindowOption] = useState('');
     const [addWeeks, setAddWeeks] = useState('');
     const [editingTile, setEditingTile] = useState<DashboardConfigItem | null>(null);
+    const [localConfig, setLocalConfig] = useState<DashboardConfigItem[]>([]);
+    const [activeId, setActiveId] = useState<number | null>(null);
 
     const { data: config = [], isLoading: configLoading } = useQuery({
         queryKey: ['dashboard-config'],
         queryFn: getDashboardConfig,
     });
+
+    useEffect(() => {
+        setLocalConfig(config);
+    }, [config]);
 
     const { data: allAccounts = [] } = useQuery({
         queryKey: ['accounts'],
@@ -288,7 +413,10 @@ export default function DashboardSection() {
     const reorderMutation = useMutation({
         mutationFn: (ids: number[]) => reorderDashboard(ids),
         onSuccess: invalidate,
-        onError: () => toast.error('Failed to reorder dashboard.'),
+        onError: () => {
+            toast.error('Failed to reorder dashboard.');
+            setLocalConfig(config);
+        },
     });
 
     const removeMutation = useMutation({
@@ -318,10 +446,39 @@ export default function DashboardSection() {
     });
 
     function move(index: number, direction: 'up' | 'down') {
-        const newConfig = [...config];
         const swapIndex = direction === 'up' ? index - 1 : index + 1;
-        [newConfig[index], newConfig[swapIndex]] = [newConfig[swapIndex], newConfig[index]];
+        const newConfig = arrayMove(localConfig, index, swapIndex);
+        setLocalConfig(newConfig);
         reorderMutation.mutate(newConfig.map((item) => item.id));
+    }
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 200, tolerance: 5 },
+        }),
+    );
+
+    function handleDragStart(event: DragStartEvent) {
+        setActiveId(event.active.id as number);
+    }
+
+    function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
+        setActiveId(null);
+        if (!over || active.id === over.id) return;
+        const oldIndex = localConfig.findIndex((i) => i.id === active.id);
+        const newIndex = localConfig.findIndex((i) => i.id === over.id);
+        if (oldIndex === newIndex) return;
+        const newConfig = arrayMove(localConfig, oldIndex, newIndex);
+        setLocalConfig(newConfig);
+        reorderMutation.mutate(newConfig.map((i) => i.id));
+    }
+
+    function handleDragCancel() {
+        setActiveId(null);
     }
 
     function resolvedTimeWindow(): string | undefined {
@@ -349,6 +506,9 @@ export default function DashboardSection() {
         });
     }
 
+    const activeItem = activeId != null ? localConfig.find((i) => i.id === activeId) : null;
+    const showGrip = localConfig.length > 1;
+
     return (
         <section>
             <div className="flex items-center justify-between mb-6">
@@ -374,79 +534,78 @@ export default function DashboardSection() {
             )}
 
             {!configLoading && config.length > 0 && (
-                <table className="w-full border-collapse mb-4">
-                    <thead>
-                        <tr className="[border-bottom:1.5px_solid_var(--border)]">
-                            <th className="text-left px-3 pt-2 pb-[10px] text-[11px] font-bold tracking-[0.06em] text-[var(--text-muted)] uppercase font-body">
-                                Tile
-                            </th>
-                            <th className="w-[120px]" />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {config.map((item, index) => {
-                            const account = allAccounts.find((a) => a.id === item.account_id);
-                            const name = account?.name ?? `Account ${item.account_id}`;
-                            const label = tileLabel(item, name);
-                            return (
-                                <tr key={item.id} className="border-b border-[var(--cream-mid)]">
-                                    <td className="p-3 text-sm font-semibold text-[var(--text-primary)] font-body">
-                                        <span>{label}</span>
-                                        {(item.tile_type === 'transactions' || item.tile_type === 'balance_over_time') && (
-                                            <label className="ml-3 inline-flex items-center gap-1.5 text-xs font-normal text-[var(--text-muted)] cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    aria-label="Show balance"
-                                                    checked={item.show_balance}
-                                                    onChange={(e) => showBalanceMutation.mutate({ tileId: item.id, showBalance: e.target.checked })}
-                                                />
-                                                Show balance
-                                            </label>
-                                        )}
-                                    </td>
-                                    <td className="p-3 pl-0">
-                                        <div className="flex gap-0.5 justify-end">
-                                            <button
-                                                aria-label={`Edit ${label}`}
-                                                className="sid-icon-btn"
-                                                onClick={() => setEditingTile(item)}
-                                                title="Edit"
-                                            >
-                                                <EditIcon />
-                                            </button>
-                                            <button
-                                                aria-label={`Move ${label} up`}
-                                                className="sid-icon-btn"
-                                                onClick={() => move(index, 'up')}
-                                                disabled={index === 0}
-                                                title="Move up"
-                                            >
-                                                <ChevronUpIcon />
-                                            </button>
-                                            <button
-                                                aria-label={`Move ${label} down`}
-                                                className="sid-icon-btn"
-                                                onClick={() => move(index, 'down')}
-                                                disabled={index === config.length - 1}
-                                                title="Move down"
-                                            >
-                                                <ChevronDownIcon />
-                                            </button>
-                                            <button
-                                                aria-label={`Remove ${label} from dashboard`}
-                                                className="sid-icon-btn danger"
-                                                onClick={() => removeMutation.mutate(item.id)}
-                                                title="Remove from dashboard"
-                                            >
-                                                <XIcon />
-                                            </button>
-                                        </div>
-                                    </td>
+                <DndContext
+                    sensors={sensors}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
+                >
+                    <SortableContext
+                        items={localConfig.map((i) => i.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <table className="w-full border-collapse mb-4">
+                            <thead>
+                                <tr className="[border-bottom:1.5px_solid_var(--border)]">
+                                    <th className="w-8" />
+                                    <th className="text-left px-3 pt-2 pb-[10px] text-[11px] font-bold tracking-[0.06em] text-[var(--text-muted)] uppercase font-body">
+                                        Tile
+                                    </th>
+                                    <th className="w-[120px]" />
                                 </tr>
+                            </thead>
+                            <tbody>
+                                {localConfig.map((item, index) => {
+                                    const account = allAccounts.find((a) => a.id === item.account_id);
+                                    const name = account?.name ?? `Account ${item.account_id}`;
+                                    const label = tileLabel(item, name);
+                                    return (
+                                        <SortableRow
+                                            key={item.id}
+                                            item={item}
+                                            index={index}
+                                            totalCount={localConfig.length}
+                                            label={label}
+                                            showGrip={showGrip}
+                                            onEdit={() => setEditingTile(item)}
+                                            onMove={(direction) => move(index, direction)}
+                                            onRemove={() => removeMutation.mutate(item.id)}
+                                            onShowBalanceChange={(showBalance) =>
+                                                showBalanceMutation.mutate({ tileId: item.id, showBalance })
+                                            }
+                                        />
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </SortableContext>
+
+                    <DragOverlay>
+                        {activeItem && (() => {
+                            const account = allAccounts.find((a) => a.id === activeItem.account_id);
+                            const name = account?.name ?? `Account ${activeItem.account_id}`;
+                            const label = tileLabel(activeItem, name);
+                            return (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <tbody>
+                                        <tr className="bg-[var(--white)] border-b border-[var(--cream-mid)]"
+                                            style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', opacity: 0.95 }}>
+                                            <td className="p-3 w-8">
+                                                <span className="cursor-grabbing text-[var(--text-muted)] flex items-center">
+                                                    <GripDotsIcon />
+                                                </span>
+                                            </td>
+                                            <td className="p-3 text-sm font-semibold text-[var(--text-primary)] font-body">
+                                                {label}
+                                            </td>
+                                            <td className="p-3 pl-0 w-[120px]" />
+                                        </tr>
+                                    </tbody>
+                                </table>
                             );
-                        })}
-                    </tbody>
-                </table>
+                        })()}
+                    </DragOverlay>
+                </DndContext>
             )}
 
             {!configLoading && allAccounts.length > 0 && (
