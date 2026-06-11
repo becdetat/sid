@@ -28,6 +28,7 @@ export default function App() {
             </BrowserRouter>
             <Toaster
                 position="bottom-center"
+                offset={64}
                 toastOptions={{
                     style: {
                         background: 'var(--teak-dark)',

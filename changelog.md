@@ -5,6 +5,7 @@
 **Release date**: TBA
 
 - Improve touch experience for editing/deleting transactions
+- Fix footer
 
 ## 0.1.24
 

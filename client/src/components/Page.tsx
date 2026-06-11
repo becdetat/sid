@@ -49,7 +49,7 @@ export function Page({
                 </div>
                 <div className="sid-header-stripe" />
             </header>
-            <main className="max-w-[1100px] mx-auto px-4 sm:px-8 py-5 sm:py-[36px]">
+            <main className="max-w-[1100px] mx-auto px-4 sm:px-8 pt-5 sm:pt-[36px] pb-20">
                 {children}
             </main>
         </div>
