@@ -32,7 +32,9 @@
       "Bash(npx vite *)",
       "Bash(DATABASE_PATH=/tmp/sid-verify-tags.db node server/dist/index.js)",
       "Bash(curl -s http://localhost:3000/api/health)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "mcp__serena__read_memory",
+      "mcp__serena__write_memory"
     ]
   }
 }

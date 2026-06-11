@@ -43,6 +43,10 @@ npm run lint      # ESLint across client and server
 npm run format    # Prettier across client and server
 ```
 
+### Serena MCP (optional)
+
+Install Serena MCP and configure it in your agent/IDE using [these instructions](https://oraios.github.io/serena/02-usage/010_installation.html).
+
 ---
 
 ## Self-hosting with Docker
