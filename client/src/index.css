@@ -128,7 +128,7 @@ body {
   background: transparent;
   color: var(--text-muted);
   border-radius: 8px;
-  padding: 5px;
+  padding: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -208,5 +208,4 @@ body {
 @media (max-width: 640px) {
   .sid-input { font-size: 16px; }
   .sid-modal-overlay { padding: 16px; }
-  .sid-icon-btn { padding: 8px; }
 }

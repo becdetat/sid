@@ -112,6 +112,7 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                             <div className="mt-0.5">{typeBadge}</div>
                         </div>
                     </div>
+                    {expanded && (
                     <div className="flex justify-end gap-0.5">
                         <button
                             aria-label={`Edit ${transaction.description}`}
@@ -128,6 +129,7 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                             <TrashIcon />
                         </button>
                     </div>
+                    )}
                 </div>
 
                 {/* Desktop layout */}
@@ -167,7 +169,7 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                     <span className="text-[13px] font-bold text-right" style={{ color: balanceColor(transaction.amount_cents) }}>
                         {formatCents(transaction.amount_cents)}
                     </span>
-                    <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <div className={`flex justify-end gap-0.5 transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         <button
                             aria-label={`Edit ${transaction.description}`}
                             onClick={(e) => { e.stopPropagation(); onEdit(transaction); }}

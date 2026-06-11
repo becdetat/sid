@@ -34,7 +34,10 @@
       "Bash(curl -s http://localhost:3000/api/health)",
       "Bash(curl *)",
       "mcp__serena__read_memory",
-      "mcp__serena__write_memory"
+      "mcp__serena__write_memory",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol",
+      "mcp__serena__replace_content"
     ]
   }
 }

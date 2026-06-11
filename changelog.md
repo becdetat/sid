@@ -1,5 +1,11 @@
 # Sid Changelog
 
+## 0.TBA
+
+**Release date**: TBA
+
+- Improve touch experience for editing/deleting transactions
+
 ## 0.1.24
 
 **Release date**: 2026-06-11
