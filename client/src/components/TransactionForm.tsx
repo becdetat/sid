@@ -52,7 +52,8 @@ function centsToDisplay(cents: number): string {
 export default function TransactionForm({ initial, accounts, initialAccountId, onSubmit, onCancel }: Props) {
     const isGenerated = !!initial?.recurrence_source_id;
     const [selectedAccountId, setSelectedAccountId] = useState<string>(initialAccountId ? String(initialAccountId) : '');
-    const [type, setType] = useState<'income' | 'expense'>(initial?.type ?? 'expense');
+    const initialType = initial?.type === 'transfer' ? 'expense' : (initial?.type ?? 'expense');
+    const [type, setType] = useState<'income' | 'expense'>(initialType);
     const [category, setCategory] = useState(initial?.category ?? '');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [description, setDescription] = useState(initial?.description ?? '');

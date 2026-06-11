@@ -19,6 +19,7 @@ const existing: Transaction = {
     recurrence: null,
     recurrence_end_date: null,
     recurrence_source_id: null,
+    transfer_group_id: null,
     tags: [],
 };
 
