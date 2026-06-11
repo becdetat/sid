@@ -1,6 +1,6 @@
 # Sid Changelog
 
-## 0.1.23
+## 0.1.24
 
 **Release date**: 2026-06-11
 
