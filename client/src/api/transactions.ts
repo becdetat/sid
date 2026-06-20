@@ -131,3 +131,55 @@ export async function importTransactions(
     const { data } = await axios.post<{ imported: number }>(`${base(accountId)}/import`, form);
     return data;
 }
+
+export type PreviewAction = 'import' | 'skip' | 'update_existing';
+
+export interface PreviewRow {
+    row_index: number;
+    date: string;
+    description: string;
+    category: string | null;
+    amount_cents: number;
+    type: 'income' | 'expense' | 'transfer';
+    notes: string | null;
+    transfer_group_id: string | null;
+    suggested_category: string | null;
+    suggested_category_confidence: number;
+    duplicate_of: number | null;
+    duplicate_within_batch: boolean;
+    action: PreviewAction;
+}
+
+export interface PreviewSummary {
+    total: number;
+    duplicates: number;
+    categorised: number;
+}
+
+export interface PreviewPayload {
+    rows: PreviewRow[];
+    summary: PreviewSummary;
+}
+
+export async function previewImport(
+    accountId: number,
+    file: File,
+    dateFormat?: 'MDY' | 'DMY',
+): Promise<PreviewPayload> {
+    const form = new FormData();
+    form.append('file', file);
+    if (dateFormat) form.append('dateFormat', dateFormat);
+    const { data } = await axios.post<PreviewPayload>(`${base(accountId)}/import/preview`, form);
+    return data;
+}
+
+export interface CommitResult {
+    imported: number;
+    skipped: number;
+    updated: number;
+}
+
+export async function commitImport(accountId: number, rows: PreviewRow[]): Promise<CommitResult> {
+    const { data } = await axios.post<CommitResult>(`${base(accountId)}/import/commit`, { rows });
+    return data;
+}

@@ -20,6 +20,12 @@ export type ParseResult =
     | { errors: RowError[] }
     | { ambiguousDateFormat: true };
 
+export interface ParseOptions {
+    // Smart import suggests categories rather than requiring the CSV to supply them — set false to relax
+    // both the header requirement and the per-row "category is required" check.
+    requireCategory?: boolean;
+}
+
 const REQUIRED_HEADERS = ['date', 'category', 'description', 'type', 'amount', 'notes'];
 
 function normaliseDateSeparator(s: string): string {
@@ -121,7 +127,8 @@ function parseCSV(text: string): string[][] {
     return records;
 }
 
-export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat): ParseResult {
+export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat, options: ParseOptions = {}): ParseResult {
+    const requireCategory = options.requireCategory ?? true;
     const text = buffer.toString('utf-8');
     const records = parseCSV(text);
 
@@ -131,7 +138,8 @@ export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat): ParseRe
 
     const headerRow = records[0].map((h) => h.trim().toLowerCase());
 
-    const missing = REQUIRED_HEADERS.filter((h) => !headerRow.includes(h));
+    const requiredHeaders = requireCategory ? REQUIRED_HEADERS : REQUIRED_HEADERS.filter((h) => h !== 'category');
+    const missing = requiredHeaders.filter((h) => !headerRow.includes(h));
     if (missing.length > 0) {
         const display = missing.map((h) => h.charAt(0).toUpperCase() + h.slice(1));
         return { errors: [{ row: 0, error: `Missing required columns: ${display.join(', ')}` }] };
@@ -184,7 +192,7 @@ export function parseImportCSV(buffer: Buffer, dateFormat?: DateFormat): ParseRe
             }
         }
 
-        if (!category) {
+        if (requireCategory && !category) {
             errors.push({ row: rowNum, error: `Row ${rowNum}: category is required` });
             rowHasError = true;
         }

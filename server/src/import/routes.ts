@@ -2,12 +2,16 @@ import { Router } from 'express';
 import multer from 'multer';
 import db from '../db';
 import { findById as findAccount } from '../accounts/repository';
-import { create } from '../transactions/repository';
+import { create, update } from '../transactions/repository';
 import { parseImportCSV } from './csv';
 import type { ImportRow, DateFormat } from './csv';
+import previewRoutes from './previewRoutes';
+import type { PreviewAction } from './previewRoutes';
 
 const router = Router({ mergeParams: true });
 const upload = multer({ storage: multer.memoryStorage() });
+
+router.use('/preview', previewRoutes);
 
 router.post('/', upload.single('file'), (req, res) => {
     const accountId = parseInt((req.params as Record<string, string>).accountId, 10);
@@ -72,6 +76,93 @@ router.post('/', upload.single('file'), (req, res) => {
     insertAll(result.rows);
 
     res.json({ imported: result.rows.length });
+});
+
+interface CommitRow {
+    row_index: number;
+    date: string;
+    description: string;
+    category: string | null;
+    amount_cents: number;
+    type: 'income' | 'expense' | 'transfer';
+    notes?: string | null;
+    transfer_group_id?: string | null;
+    duplicate_of: number | null;
+    action: PreviewAction;
+}
+
+router.post('/commit', (req, res) => {
+    const accountId = parseInt((req.params as Record<string, string>).accountId, 10);
+
+    const account = findAccount(accountId);
+    if (!account) {
+        res.status(404).json({ error: 'account not found' });
+        return;
+    }
+
+    const body = req.body as { rows?: unknown };
+    if (!Array.isArray(body.rows)) {
+        res.status(400).json({ error: 'rows is required' });
+        return;
+    }
+    const rows = body.rows as CommitRow[];
+
+    const errors: { row: number; error: string }[] = [];
+    for (const row of rows) {
+        if (row.action === 'update_existing' && !row.duplicate_of) {
+            errors.push({ row: row.row_index, error: 'Cannot update — no matching transaction' });
+        } else if (row.action !== 'skip' && !row.description?.trim()) {
+            errors.push({ row: row.row_index, error: `Row ${row.row_index}: description is required` });
+        }
+    }
+    if (errors.length > 0) {
+        res.status(422).json({ errors });
+        return;
+    }
+
+    let imported = 0;
+    let skipped = 0;
+    let updated = 0;
+
+    const applyAll = db.transaction((rowsToApply: CommitRow[]) => {
+        for (const row of rowsToApply) {
+            if (row.action === 'skip') {
+                skipped++;
+                continue;
+            }
+
+            const amount = Math.abs(row.amount_cents) / 100;
+            const category = row.category?.trim() || undefined;
+
+            if (row.action === 'import') {
+                create({
+                    account_id: accountId,
+                    category,
+                    description: row.description,
+                    amount,
+                    type: row.type,
+                    date: row.date,
+                    notes: row.notes ?? undefined,
+                    transfer_group_id: row.transfer_group_id ?? undefined,
+                });
+                imported++;
+            } else if (row.action === 'update_existing') {
+                // Date is intentionally left untouched — the existing transaction's date is kept.
+                update(row.duplicate_of!, {
+                    description: row.description,
+                    category: category ?? null,
+                    amount,
+                    type: row.type === 'income' || row.type === 'expense' ? row.type : undefined,
+                    notes: row.notes ?? null,
+                });
+                updated++;
+            }
+        }
+    });
+
+    applyAll(rows);
+
+    res.json({ imported, skipped, updated });
 });
 
 export default router;

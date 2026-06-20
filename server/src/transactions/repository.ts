@@ -53,6 +53,12 @@ function toAmountCents(amount: number, type: 'income' | 'expense'): number {
     return type === 'income' ? abs : -abs;
 }
 
+// Transfers are always stored as positive cents (direction comes from the paired transfer row, not the sign).
+export function computeAmountCents(amount: number, type: 'income' | 'expense' | 'transfer'): number {
+    if (type === 'transfer') return Math.round(Math.abs(amount) * 100);
+    return toAmountCents(amount, type);
+}
+
 export interface TransactionFilters {
     keyword?: string;
     from?: string;
@@ -177,9 +183,7 @@ export function findById(id: number): Transaction | undefined {
 }
 
 export function create(input: CreateTransactionInput): Transaction {
-    const amount_cents = input.type === 'transfer'
-        ? Math.round(Math.abs(input.amount) * 100)
-        : toAmountCents(input.amount, input.type);
+    const amount_cents = computeAmountCents(input.amount, input.type);
     const result = db
         .prepare(
             `INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, recurrence, recurrence_end_date, transfer_group_id)

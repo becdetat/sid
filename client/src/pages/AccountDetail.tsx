@@ -12,8 +12,12 @@ import {
     bulkDeleteTransactions,
     bulkExportTransactions,
     importTransactions,
+    previewImport,
+    commitImport,
     type TransactionPayload,
     type TransactionFilters,
+    type PreviewPayload,
+    type PreviewRow,
 } from '../api/transactions';
 import { createTransfer, updateTransfer, deleteTransfer, getTransfer, type TransferPayload, type TransferPair } from '../api/transfers';
 import { getCategories } from '../api/categories';
@@ -29,6 +33,7 @@ import TransferForm from '../components/TransferForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import DateFormatPickerDialog from '../components/DateFormatPickerDialog';
+import ImportPreviewDialog from '../components/ImportPreviewDialog';
 import type { Transaction } from '../types/transaction';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
@@ -43,8 +48,9 @@ type Modal =
     | { type: 'delete'; transaction: Transaction }
     | { type: 'delete-transfer'; transaction: Transaction }
     | { type: 'bulk-delete' }
-    | { type: 'date-format-picker'; file: File }
+    | { type: 'date-format-picker'; file: File; mode: 'quick' | 'smart' }
     | { type: 'import-errors'; errors: { row: number; error: string }[] }
+    | { type: 'smart-import-preview'; preview: PreviewPayload }
     | null;
 
 interface AccountDetailLocationState {
@@ -54,11 +60,13 @@ interface AccountDetailLocationState {
 function ActionsDropdown({
     onDownloadTemplate,
     onImportCsv,
+    onSmartImportCsv,
     onExportCsv,
     isImporting,
 }: {
     onDownloadTemplate: () => void;
     onImportCsv: () => void;
+    onSmartImportCsv: () => void;
     onExportCsv: () => void;
     isImporting: boolean;
 }) {
@@ -105,6 +113,12 @@ function ActionsDropdown({
                     </button>
                     <button
                         className="w-full text-left px-4 py-2 text-sm font-body text-[var(--text)] hover:bg-[var(--cream)] transition-colors"
+                        onClick={() => pick(onSmartImportCsv)}
+                    >
+                        Smart import…
+                    </button>
+                    <button
+                        className="w-full text-left px-4 py-2 text-sm font-body text-[var(--text)] hover:bg-[var(--cream)] transition-colors"
                         onClick={() => pick(onExportCsv)}
                     >
                         Export CSV
@@ -128,8 +142,11 @@ export default function AccountDetail() {
     const [editingTransferPair, setEditingTransferPair] = useState<TransferPair | null>(null);
     const [createFormKey, setCreateFormKey] = useState(0);
     const [isImporting, setIsImporting] = useState(false);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [isCommitting, setIsCommitting] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const importInputRef = useRef<HTMLInputElement>(null);
+    const smartImportInputRef = useRef<HTMLInputElement>(null);
 
     const [keyword, setKeyword] = useState('');
     const [debouncedKeyword, setDebouncedKeyword] = useState('');
@@ -444,7 +461,7 @@ export default function AccountDetail() {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data as Record<string, unknown> | undefined;
                 if (data?.code === 'ambiguous_date_format') {
-                    setModal({ type: 'date-format-picker', file });
+                    setModal({ type: 'date-format-picker', file, mode: 'quick' });
                     return;
                 }
                 if (Array.isArray(data?.errors)) {
@@ -465,6 +482,62 @@ export default function AccountDetail() {
         if (!file) return;
         e.target.value = '';
         await runImport(file);
+    }
+
+    async function runSmartImportPreview(file: File, dateFormat?: 'MDY' | 'DMY') {
+        setIsPreviewLoading(true);
+        try {
+            const preview = await previewImport(accountId, file, dateFormat);
+            setModal({ type: 'smart-import-preview', preview });
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const data = err.response?.data as Record<string, unknown> | undefined;
+                if (data?.code === 'ambiguous_date_format') {
+                    setModal({ type: 'date-format-picker', file, mode: 'smart' });
+                    return;
+                }
+                if (Array.isArray(data?.errors)) {
+                    setModal({ type: 'import-errors', errors: data.errors as { row: number; error: string }[] });
+                    return;
+                }
+                toast.error((data?.error as string | undefined) ?? 'Failed to preview import.');
+            } else {
+                toast.error('Failed to preview import.');
+            }
+        } finally {
+            setIsPreviewLoading(false);
+        }
+    }
+
+    async function handleSmartImport(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';
+        await runSmartImportPreview(file);
+    }
+
+    async function handleCommitPreview(rows: PreviewRow[]) {
+        setIsCommitting(true);
+        try {
+            const { imported, skipped, updated } = await commitImport(accountId, rows);
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+            toast.success(`Imported ${imported} · Skipped ${skipped} · Updated ${updated}.`);
+            setModal(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const data = err.response?.data as Record<string, unknown> | undefined;
+                if (Array.isArray(data?.errors)) {
+                    const errors = data.errors as { row: number; error: string }[];
+                    toast.error(errors[0]?.error ?? 'Failed to commit import.');
+                    return;
+                }
+                toast.error((data?.error as string | undefined) ?? 'Failed to commit import.');
+            } else {
+                toast.error('Failed to commit import.');
+            }
+        } finally {
+            setIsCommitting(false);
+        }
     }
 
     if (accountLoading) {
@@ -493,11 +566,19 @@ export default function AccountDetail() {
                     className="hidden"
                     onChange={handleImport}
                 />
+                <input
+                    ref={smartImportInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={handleSmartImport}
+                />
                 <ActionsDropdown
                     onDownloadTemplate={downloadImportTemplate}
                     onImportCsv={() => importInputRef.current?.click()}
+                    onSmartImportCsv={() => smartImportInputRef.current?.click()}
                     onExportCsv={handleExportCsv}
-                    isImporting={isImporting}
+                    isImporting={isImporting || isPreviewLoading}
                 />
                 <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={() => setModal({ type: 'add-transfer' })}>
                     ↔ New transfer
@@ -874,10 +955,22 @@ export default function AccountDetail() {
             {modal?.type === 'date-format-picker' && (
                 <DateFormatPickerDialog
                     onSelect={(format) => {
-                        const file = modal.file;
+                        const { file, mode } = modal;
                         setModal(null);
-                        runImport(file, format);
+                        if (mode === 'smart') {
+                            runSmartImportPreview(file, format);
+                        } else {
+                            runImport(file, format);
+                        }
                     }}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'smart-import-preview' && (
+                <ImportPreviewDialog
+                    preview={modal.preview}
+                    isCommitting={isCommitting}
+                    onCommit={handleCommitPreview}
                     onCancel={() => setModal(null)}
                 />
             )}
