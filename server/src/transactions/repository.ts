@@ -19,6 +19,7 @@ export interface Transaction {
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
     transfer_group_id: string | null;
+    cleared_at: string | null;
     tags: TagRef[];
 }
 
@@ -71,6 +72,7 @@ export interface TransactionFilters {
     recurringOnly?: boolean;
     tagIds?: number[];
     tagMode?: 'any' | 'all';
+    cleared?: 'yes' | 'no';
 }
 
 function stitchTags<T extends { id: number }>(rows: T[]): (T & { tags: TagRef[] })[] {
@@ -142,6 +144,11 @@ function buildFilterClauses(filters: TransactionFilters | undefined, tableAlias 
             conditions.push(`EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = ${col('id')} AND tt.tag_id IN (${tagPlaceholders}))`);
             params.push(...filters.tagIds);
         }
+    }
+    if (filters?.cleared === 'yes') {
+        conditions.push(`${col('cleared_at')} IS NOT NULL`);
+    } else if (filters?.cleared === 'no') {
+        conditions.push(`${col('cleared_at')} IS NULL`);
     }
 
     return { conditions, params };
@@ -312,4 +319,23 @@ export function getBalance(accountId: number): number {
         )
         .get(accountId) as { balance: number };
     return row.balance;
+}
+
+export function getClearedBalance(accountId: number): number {
+    const row = db
+        .prepare(
+            'SELECT COALESCE(SUM(amount_cents), 0) AS balance FROM transactions WHERE account_id = ? AND cleared_at IS NOT NULL AND deleted_at IS NULL',
+        )
+        .get(accountId) as { balance: number };
+    return row.balance;
+}
+
+export function clear(id: number): void {
+    db.prepare(
+        `UPDATE transactions SET cleared_at = datetime('now') WHERE id = ? AND cleared_at IS NULL`,
+    ).run(id);
+}
+
+export function unclear(id: number): void {
+    db.prepare(`UPDATE transactions SET cleared_at = NULL WHERE id = ?`).run(id);
 }

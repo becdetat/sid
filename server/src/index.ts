@@ -22,6 +22,7 @@ import chartRoutes from './chart/routes';
 import budgetRoutes from './budgets/routes';
 import savedViewRoutes from './saved-views/routes';
 import transferRoutes from './transfers/routes';
+import reconciliationRoutes from './reconciliations/routes';
 
 const app = express();
 const PORT = 3000;
@@ -49,6 +50,7 @@ app.use('/api/accounts/:id/chart', chartRoutes);
 app.use('/api/accounts/:accountId/budgets', budgetRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/accounts/:accountId/transactions/import', importRoutes);
+app.use('/api/accounts/:accountId/reconciliations', reconciliationRoutes);
 app.use('/api/accounts/:accountId/transactions', transactionRoutes);
 app.use('/api/transactions/:txId/attachments', txAttachmentRouter);
 app.use('/api/attachments', attachmentRouter);

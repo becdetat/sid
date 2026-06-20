@@ -14,6 +14,8 @@ interface Props {
     isSelected?: boolean;
     onSelect?: (id: number) => void;
     initialExpanded?: boolean;
+    onToggleCleared?: (id: number, cleared: boolean) => void;
+    reconcileMode?: boolean;
 }
 
 const EditIcon = () => (
@@ -33,7 +35,7 @@ function formatBytes(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete, isSelected = false, onSelect, initialExpanded = false }: Props) {
+export default function TransactionRow({ transaction, isLast, gridTemplate, onEdit, onDelete, isSelected = false, onSelect, initialExpanded = false, onToggleCleared, reconcileMode = false }: Props) {
     const [expanded, setExpanded] = useState(initialExpanded);
     const isIncome = transaction.type === 'income';
 
@@ -46,6 +48,7 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
     const isTransfer = transaction.type === 'transfer';
     const isTemplate = !!transaction.recurrence && !transaction.recurrence_source_id;
     const isGenerated = !!transaction.recurrence_source_id;
+    const isCleared = transaction.cleared_at !== null;
 
     const typeBadge = isTransfer ? (
         <span className="flex items-center gap-1">
@@ -67,6 +70,24 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
         </span>
     );
 
+    const clearedToggle = (
+        <button
+            type="button"
+            aria-label={isCleared ? 'Unmark as cleared' : 'Mark as cleared'}
+            onClick={(e) => { e.stopPropagation(); onToggleCleared?.(transaction.id, !isCleared); }}
+            className={`flex items-center justify-center w-5 h-5 rounded-full border-[1.5px] flex-shrink-0 transition-all text-[11px] font-bold ${
+                isCleared
+                    ? 'bg-[var(--green)] border-[var(--green)] text-white'
+                    : reconcileMode
+                        ? 'border-[var(--cream-dark)] text-[var(--cream-dark)] hover:border-[var(--green)] hover:text-[var(--green)]'
+                        : 'border-[var(--border)] text-[var(--border)] hover:border-[var(--green)] hover:text-[var(--green)]'
+            }`}
+            style={{ lineHeight: 1 }}
+        >
+            ✓
+        </button>
+    );
+
     return (
         <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--cream-mid)', background: isSelected ? 'var(--cream)' : undefined }}>
             {/* Clickable row */}
@@ -78,6 +99,9 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                 {/* Mobile layout */}
                 <div className="sm:hidden px-4 py-3 flex flex-col gap-1.5">
                     <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+                            {clearedToggle}
+                        </div>
                         <div className="flex-1 min-w-0">
                             <div className="text-[13px] text-[var(--text-primary)] font-semibold leading-snug">
                                 {transaction.description}
@@ -147,6 +171,9 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                             className="w-4 h-4 cursor-pointer accent-[var(--teak)]"
                         />
                     )}
+                    <div className="flex items-center">
+                        {clearedToggle}
+                    </div>
                     <span className="text-[13px] text-[var(--text-muted)]">{formatDate(transaction.date)}</span>
                     <span className="text-xs text-[var(--text-muted)]">{transaction.category ?? ''}</span>
                     <span className="text-[13px] text-[var(--text-primary)] font-semibold">
@@ -204,6 +231,9 @@ export default function TransactionRow({ transaction, isLast, gridTemplate, onEd
                         <p className="text-xs text-[var(--text-muted)] italic">
                             Recurring {transaction.recurrence}{transaction.recurrence_end_date ? ` until ${transaction.recurrence_end_date}` : ''}
                         </p>
+                    )}
+                    {isCleared && transaction.cleared_at && (
+                        <p className="text-xs text-[var(--green)]">✓ Cleared {formatDateTime(transaction.cleared_at)}</p>
                     )}
                     {transaction.tags && transaction.tags.length > 0 && (
                         <div>

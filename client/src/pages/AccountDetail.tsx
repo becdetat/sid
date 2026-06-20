@@ -9,6 +9,7 @@ import {
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    clearTransaction,
     bulkDeleteTransactions,
     bulkExportTransactions,
     importTransactions,
@@ -19,6 +20,9 @@ import {
     type PreviewPayload,
     type PreviewRow,
 } from '../api/transactions';
+import { getLastReconciliation, createReconciliation, type Reconciliation } from '../api/reconciliations';
+import ReconcileSetupDialog from '../components/ReconcileSetupDialog';
+import ReconcileBar from '../components/ReconcileBar';
 import { createTransfer, updateTransfer, deleteTransfer, getTransfer, type TransferPayload, type TransferPair } from '../api/transfers';
 import { getCategories } from '../api/categories';
 import { listTags, bulkTag } from '../api/tags';
@@ -35,6 +39,7 @@ import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import DateFormatPickerDialog from '../components/DateFormatPickerDialog';
 import ImportPreviewDialog from '../components/ImportPreviewDialog';
 import type { Transaction } from '../types/transaction';
+import { formatCents } from '../utils/format';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
@@ -51,6 +56,7 @@ type Modal =
     | { type: 'date-format-picker'; file: File; mode: 'quick' | 'smart' }
     | { type: 'import-errors'; errors: { row: number; error: string }[] }
     | { type: 'smart-import-preview'; preview: PreviewPayload }
+    | { type: 'reconcile-setup' }
     | null;
 
 interface AccountDetailLocationState {
@@ -129,7 +135,7 @@ function ActionsDropdown({
     );
 }
 
-const TX_GRID = '32px 130px 120px 1fr 90px 120px 72px';
+const TX_GRID = '32px 28px 130px 120px 1fr 90px 120px 72px';
 
 export default function AccountDetail() {
     const { id } = useParams<{ id: string }>();
@@ -160,8 +166,11 @@ export default function AccountDetail() {
     const [filterRecurringOnly, setFilterRecurringOnly] = useState(false);
     const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
     const [filterTagMode, setFilterTagMode] = useState<'any' | 'all'>('any');
+    const [filterCleared, setFilterCleared] = useState<'yes' | 'no' | ''>('');
     const [activeDefaultViewName, setActiveDefaultViewName] = useState<string | null>(null);
     const defaultAppliedRef = useRef(false);
+    const [reconcileSetup, setReconcileSetup] = useState<{ statementDate: string; statementBalanceCents: number } | null>(null);
+    const [isFinishingReconcile, setIsFinishingReconcile] = useState(false);
 
     const expandTxId = (() => {
         const v = new URLSearchParams(location.search).get('expand');
@@ -189,7 +198,11 @@ export default function AccountDetail() {
         recurringOnly: filterRecurringOnly || undefined,
         tagIds: filterTagIds.length > 0 ? filterTagIds : undefined,
         tagMode: filterTagMode !== 'any' ? filterTagMode : undefined,
+        cleared: filterCleared || undefined,
     };
+    const effectiveFilters: TransactionFilters = reconcileSetup
+        ? { ...activeFilters, to: reconcileSetup.statementDate }
+        : activeFilters;
     const isFiltered = Object.values(activeFilters).some(Boolean);
 
     function clearFilters() {
@@ -205,6 +218,7 @@ export default function AccountDetail() {
         setFilterRecurringOnly(false);
         setFilterTagIds([]);
         setFilterTagMode('any');
+        setFilterCleared('');
         setActiveDefaultViewName(null);
     }
 
@@ -221,6 +235,7 @@ export default function AccountDetail() {
         setFilterRecurringOnly(filters.recurringOnly ?? false);
         setFilterTagIds(Array.isArray(filters.tagIds) ? filters.tagIds : []);
         setFilterTagMode(filters.tagMode ?? 'any');
+        setFilterCleared(filters.cleared ?? '');
         setActiveDefaultViewName(defaultName);
     }
 
@@ -254,9 +269,14 @@ export default function AccountDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [savedViewsForAccount]);
 
+    const { data: lastReconciliation = null } = useQuery<Reconciliation | null>({
+        queryKey: ['reconciliations-last', accountId],
+        queryFn: () => getLastReconciliation(accountId),
+    });
+
     const { data: transactions = [], isLoading: txLoading } = useQuery({
-        queryKey: ['transactions', accountId, activeFilters],
-        queryFn: () => listTransactions(accountId, isFiltered ? activeFilters : undefined),
+        queryKey: ['transactions', accountId, effectiveFilters],
+        queryFn: () => listTransactions(accountId, (isFiltered || reconcileSetup) ? effectiveFilters : undefined),
     });
 
     const { data: categories = [] } = useQuery({
@@ -307,6 +327,17 @@ export default function AccountDetail() {
     function handleClearSelection() {
         setSelectedIds(new Set());
     }
+
+    const clearedBalance = transactions.filter((t) => t.cleared_at !== null).reduce((sum, t) => sum + t.amount_cents, 0);
+
+    const clearMutation = useMutation({
+        mutationFn: ({ txId, cleared }: { txId: number; cleared: boolean }) =>
+            clearTransaction(accountId, txId, cleared),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions', accountId] });
+        },
+        onError: () => toast.error('Failed to update cleared status.'),
+    });
 
     const createMutation = useMutation({
         mutationFn: (data: TransactionPayload) => createTransaction(accountId, data),
@@ -374,6 +405,25 @@ export default function AccountDetail() {
         },
         onError: () => toast.error('Failed to delete transfer.'),
     });
+
+    async function handleFinishReconciliation() {
+        if (!reconcileSetup) return;
+        setIsFinishingReconcile(true);
+        try {
+            await createReconciliation(accountId, {
+                statement_date: reconcileSetup.statementDate,
+                statement_balance_cents: reconcileSetup.statementBalanceCents,
+            });
+            queryClient.invalidateQueries({ queryKey: ['reconciliations-last', accountId] });
+            queryClient.invalidateQueries({ queryKey: ['reconciliations', accountId] });
+            setReconcileSetup(null);
+            toast.success('Reconciliation complete.');
+        } catch {
+            toast.error('Failed to save reconciliation.');
+        } finally {
+            setIsFinishingReconcile(false);
+        }
+    }
 
     async function handleBulkTag(add: number[]) {
         try {
@@ -557,6 +607,14 @@ export default function AccountDetail() {
                 &larr; {fromAllAccounts ? 'Back to all accounts' : 'Back to dashboard'}
             </PageLink>
 
+            {/* Cleared chip — shown outside reconcile mode */}
+            {!reconcileSetup && transactions.some((t) => t.cleared_at !== null) && (
+                <div className="flex items-center gap-2 mb-3 text-sm text-[var(--text-secondary)]">
+                    <span className="text-[var(--green)] font-semibold">✓ Cleared: {formatCents(clearedBalance)}</span>
+                    <span className="text-[var(--text-muted)]">of {formatCents(balance)}</span>
+                </div>
+            )}
+
             {/* Action bar */}
             <div className="flex flex-wrap justify-end gap-2 mb-5 sm:mb-7">
                 <input
@@ -580,6 +638,13 @@ export default function AccountDetail() {
                     onExportCsv={handleExportCsv}
                     isImporting={isImporting || isPreviewLoading}
                 />
+                <button
+                    className="sid-btn sid-btn-ghost sid-btn-sm"
+                    onClick={() => setModal({ type: 'reconcile-setup' })}
+                    disabled={reconcileSetup !== null}
+                >
+                    ⊘ Reconcile
+                </button>
                 <button className="sid-btn sid-btn-ghost sid-btn-sm" onClick={() => setModal({ type: 'add-transfer' })}>
                     ↔ New transfer
                 </button>
@@ -726,6 +791,18 @@ export default function AccountDetail() {
                                     <option value="no">No attachment</option>
                                 </select>
                             </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em]">Cleared</label>
+                                <select
+                                    className="sid-input"
+                                    value={filterCleared}
+                                    onChange={(e) => setFilterCleared(e.target.value as 'yes' | 'no' | '')}
+                                >
+                                    <option value="">Any</option>
+                                    <option value="yes">Cleared</option>
+                                    <option value="no">Not cleared</option>
+                                </select>
+                            </div>
                             <label className="flex items-center gap-2 self-end pb-[6px] text-xs font-body text-[var(--text)] cursor-pointer">
                                 <input
                                     type="checkbox"
@@ -790,6 +867,18 @@ export default function AccountDetail() {
                 )}
             </div>
 
+            {reconcileSetup && (
+                <ReconcileBar
+                    statementDate={reconcileSetup.statementDate}
+                    statementBalanceCents={reconcileSetup.statementBalanceCents}
+                    transactions={transactions}
+                    lastReconciliation={lastReconciliation}
+                    onFinish={handleFinishReconciliation}
+                    onExit={() => setReconcileSetup(null)}
+                    isFinishing={isFinishingReconcile}
+                />
+            )}
+
             <BulkActionBar
                 selectedCount={visibleSelectedIds.size}
                 onDelete={() => setModal({ type: 'bulk-delete' })}
@@ -838,6 +927,7 @@ export default function AccountDetail() {
                             aria-label="Select all transactions"
                             className="w-4 h-4 cursor-pointer accent-[var(--teak)] self-center"
                         />
+                        <div />
                         {['Date', 'Category', 'Description', 'Type', 'Amount', ''].map((h, i) => (
                             <div key={i} className={`text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.07em] ${i === 4 ? 'text-right' : 'text-left'}`}>
                                 {h}
@@ -852,6 +942,8 @@ export default function AccountDetail() {
                             isLast={idx === transactions.length - 1}
                             gridTemplate={TX_GRID}
                             initialExpanded={expandTxId === t.id}
+                            onToggleCleared={(txId, cleared) => clearMutation.mutate({ txId, cleared })}
+                            reconcileMode={reconcileSetup !== null}
                             onEdit={(tx) => {
                                 if (tx.transfer_group_id) {
                                     getTransfer(tx.transfer_group_id).then((pair) => {
@@ -971,6 +1063,15 @@ export default function AccountDetail() {
                     preview={modal.preview}
                     isCommitting={isCommitting}
                     onCommit={handleCommitPreview}
+                    onCancel={() => setModal(null)}
+                />
+            )}
+            {modal?.type === 'reconcile-setup' && (
+                <ReconcileSetupDialog
+                    onSubmit={(statementDate, statementBalanceCents) => {
+                        setReconcileSetup({ statementDate, statementBalanceCents });
+                        setModal(null);
+                    }}
                     onCancel={() => setModal(null)}
                 />
             )}

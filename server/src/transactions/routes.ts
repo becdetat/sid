@@ -4,7 +4,7 @@ import * as tagRepo from '../tags/repository';
 import { findById as findAccount } from '../accounts/repository';
 
 export function parseFilters(query: Record<string, unknown>): repo.TransactionFilters {
-    const { keyword, from, to, category, type, amountMin, amountMax, hasAttachment, recurringOnly, tagIds, tagMode } = query;
+    const { keyword, from, to, category, type, amountMin, amountMax, hasAttachment, recurringOnly, tagIds, tagMode, cleared } = query;
     const filters: repo.TransactionFilters = {};
     if (typeof keyword === 'string' && keyword) filters.keyword = keyword;
     if (typeof from === 'string' && from) filters.from = from;
@@ -25,6 +25,7 @@ export function parseFilters(query: Record<string, unknown>): repo.TransactionFi
         if (ids.length > 0) filters.tagIds = ids;
     }
     if (tagMode === 'any' || tagMode === 'all') filters.tagMode = tagMode;
+    if (cleared === 'yes' || cleared === 'no') filters.cleared = cleared;
     return filters;
 }
 
@@ -209,6 +210,27 @@ router.put<{ accountId: string; id: string }>('/:id', (req, res) => {
     }
 
     res.json(updated);
+});
+
+router.put<{ accountId: string; id: string }>('/:id/cleared', (req, res) => {
+    const accountId = parseInt(req.params.accountId, 10);
+    const id = parseInt(req.params.id, 10);
+    const existing = repo.findById(id);
+    if (!existing || existing.account_id !== accountId) {
+        res.status(404).json({ error: 'transaction not found' });
+        return;
+    }
+    const { cleared } = req.body as { cleared?: boolean };
+    if (cleared === undefined || typeof cleared !== 'boolean') {
+        res.status(400).json({ error: 'cleared must be a boolean' });
+        return;
+    }
+    if (cleared) {
+        repo.clear(id);
+    } else {
+        repo.unclear(id);
+    }
+    res.json(repo.findById(id));
 });
 
 router.put<{ accountId: string; id: string }>('/:id/tags', (req, res) => {

@@ -5,6 +5,7 @@ import DashboardSection from '../components/settings/DashboardSection';
 import BudgetsSection from '../components/settings/BudgetsSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
 import TagsSection from '../components/settings/TagsSection';
+import ReconciliationHistorySection from '../components/settings/ReconciliationHistorySection';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
@@ -14,6 +15,7 @@ const navItems = [
     { label: 'Budgets', key: 'budgets' },
     { label: 'Tags', key: 'tags' },
     { label: 'Import / Export', key: 'import-export' },
+    { label: 'Reconciliation', key: 'reconciliation' },
 ] as const;
 
 type Section = (typeof navItems)[number]['key'];
@@ -57,6 +59,7 @@ export default function Settings() {
                     {section === 'budgets' && <BudgetsSection />}
                     {section === 'tags' && <TagsSection />}
                     {section === 'import-export' && <ImportExportSection />}
+                    {section === 'reconciliation' && <ReconciliationHistorySection />}
                 </div>
             </div>
         </Page>

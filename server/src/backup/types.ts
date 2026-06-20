@@ -21,6 +21,7 @@ export interface BackupTransaction {
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
     transfer_group_id: string | null;
+    cleared_at: string | null;
 }
 
 export interface BackupAttachment {
@@ -71,6 +72,15 @@ export interface BackupTransactionTag {
     tag_id: number;
 }
 
+export interface BackupReconciliation {
+    id: number;
+    account_id: number;
+    statement_date: string;
+    statement_balance_cents: number;
+    completed_at: string;
+    notes: string | null;
+}
+
 export interface BackupPayload {
     version: number;
     exported_at: string;
@@ -81,6 +91,7 @@ export interface BackupPayload {
     saved_views?: BackupSavedView[];
     tags?: BackupTag[];
     transaction_tags?: BackupTransactionTag[];
+    reconciliations?: BackupReconciliation[];
 }
 
 export interface ImportResult {

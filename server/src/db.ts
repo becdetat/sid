@@ -221,4 +221,20 @@ if (seeded === 0) {
     `);
 }
 
+try {
+    db.exec(`ALTER TABLE transactions ADD COLUMN cleared_at DATETIME`);
+} catch { /* column already exists */ }
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS reconciliations (
+        id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id              INTEGER NOT NULL REFERENCES accounts(id),
+        statement_date          DATE NOT NULL,
+        statement_balance_cents INTEGER NOT NULL,
+        completed_at            DATETIME NOT NULL DEFAULT (datetime('now')),
+        notes                   TEXT
+    );
+`);
+
 export default db;
+

@@ -17,6 +17,7 @@ export interface TransactionFilters {
     recurringOnly?: boolean;
     tagIds?: number[];
     tagMode?: 'any' | 'all';
+    cleared?: 'yes' | 'no' | '';
 }
 
 function toQueryParams(filters?: TransactionFilters): Record<string, string> {
@@ -34,6 +35,8 @@ function toQueryParams(filters?: TransactionFilters): Record<string, string> {
     if (filters.recurringOnly) params.recurringOnly = 'true';
     if (filters.tagIds && filters.tagIds.length > 0) params.tagIds = filters.tagIds.join(',');
     if (filters.tagMode) params.tagMode = filters.tagMode;
+    if (filters.cleared === 'yes') params.cleared = 'yes';
+    else if (filters.cleared === 'no') params.cleared = 'no';
     return params;
 }
 
@@ -90,6 +93,11 @@ export async function updateTransaction(
     payload: Partial<TransactionPayload> & { scope?: 'one' | 'future' },
 ): Promise<Transaction> {
     const { data } = await axios.put<Transaction>(`${base(accountId)}/${id}`, payload);
+    return data;
+}
+
+export async function clearTransaction(accountId: number, id: number, cleared: boolean): Promise<Transaction> {
+    const { data } = await axios.put<Transaction>(`${base(accountId)}/${id}/cleared`, { cleared });
     return data;
 }
 

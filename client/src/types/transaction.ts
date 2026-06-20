@@ -22,5 +22,6 @@ export interface Transaction {
     recurrence_end_date: string | null;
     recurrence_source_id: number | null;
     transfer_group_id: string | null;
+    cleared_at: string | null;
     tags: TagRef[];
 }

@@ -1,5 +1,5 @@
 import db from '../db';
-import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, BackupTag, BackupTransactionTag, ImportResult } from './types';
+import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, BackupTag, BackupTransactionTag, BackupReconciliation, ImportResult } from './types';
 
 function formatTimestamp(d: Date): string {
     const p = (n: number) => String(n).padStart(2, '0');
@@ -9,7 +9,7 @@ function formatTimestamp(d: Date): string {
 export function exportAll(): BackupPayload {
     const accounts = db.prepare(`SELECT id, name, created_at, deleted_at FROM accounts ORDER BY id`).all() as BackupAccount[];
 
-    const transactions = db.prepare(`SELECT id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id, transfer_group_id FROM transactions ORDER BY id`).all() as BackupTransaction[];
+    const transactions = db.prepare(`SELECT id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id, transfer_group_id, cleared_at FROM transactions ORDER BY id`).all() as BackupTransaction[];
 
     const rawAttachments = db.prepare(`SELECT id, transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at FROM attachments ORDER BY id`).all() as (Omit<BackupAttachment, 'data'> & { data: Buffer })[];
 
@@ -26,8 +26,10 @@ export function exportAll(): BackupPayload {
 
     const transaction_tags = db.prepare(`SELECT transaction_id, tag_id FROM transaction_tags ORDER BY transaction_id, tag_id`).all() as BackupTransactionTag[];
 
+    const reconciliations = db.prepare(`SELECT id, account_id, statement_date, statement_balance_cents, completed_at, notes FROM reconciliations ORDER BY id`).all() as BackupReconciliation[];
+
     return {
-        version: 4,
+        version: 5,
         exported_at: new Date().toISOString(),
         accounts,
         transactions,
@@ -36,12 +38,13 @@ export function exportAll(): BackupPayload {
         saved_views,
         tags,
         transaction_tags,
+        reconciliations,
     };
 }
 
 export function importMerge(payload: BackupPayload): ImportResult {
     const insertAccount = db.prepare(`INSERT INTO accounts (name, created_at, deleted_at) VALUES (?, ?, ?)`);
-    const insertTransaction = db.prepare(`INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, transfer_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const insertTransaction = db.prepare(`INSERT INTO transactions (account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, transfer_group_id, cleared_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const updateRecurrenceSource = db.prepare(`UPDATE transactions SET recurrence_source_id = ? WHERE id = ?`);
     const insertAttachment = db.prepare(`INSERT INTO attachments (transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
     const findActiveByName = db.prepare(`SELECT id FROM accounts WHERE lower(name) = lower(?) AND deleted_at IS NULL`);
@@ -74,6 +77,7 @@ export function importMerge(payload: BackupPayload): ImportResult {
                 newAccountId, tx.category, tx.description, tx.amount_cents,
                 tx.type, tx.date, tx.notes, tx.created_at, tx.updated_at, tx.deleted_at,
                 tx.recurrence ?? null, tx.recurrence_end_date ?? null, tx.transfer_group_id ?? null,
+                tx.cleared_at ?? null,
             );
             transactionIdMap.set(tx.id, result.lastInsertRowid as number);
         }
@@ -185,6 +189,19 @@ export function importMerge(payload: BackupPayload): ImportResult {
             }
         }
 
+        if (Array.isArray(p.reconciliations)) {
+            const insertRecon = db.prepare(
+                `INSERT INTO reconciliations (account_id, statement_date, statement_balance_cents, completed_at, notes)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON CONFLICT DO NOTHING`,
+            );
+            for (const r of p.reconciliations) {
+                const newAccountId = accountIdMap.get(r.account_id);
+                if (newAccountId === undefined) continue;
+                insertRecon.run(newAccountId, r.statement_date, r.statement_balance_cents, r.completed_at, r.notes ?? null);
+            }
+        }
+
         return {
             accounts: accountIdMap.size,
             transactions: transactionIdMap.size,
@@ -200,12 +217,14 @@ export function importMerge(payload: BackupPayload): ImportResult {
 
 export function importWipe(payload: BackupPayload): ImportResult {
     const insertAccount = db.prepare(`INSERT INTO accounts (id, name, created_at, deleted_at) VALUES (?, ?, ?, ?)`);
-    const insertTransaction = db.prepare(`INSERT INTO transactions (id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id, transfer_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const insertTransaction = db.prepare(`INSERT INTO transactions (id, account_id, category, description, amount_cents, type, date, notes, created_at, updated_at, deleted_at, recurrence, recurrence_end_date, recurrence_source_id, transfer_group_id, cleared_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const insertAttachment = db.prepare(`INSERT INTO attachments (id, transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 
     const run = db.transaction((p: BackupPayload) => {
+        db.prepare(`DELETE FROM reconciliations`).run();
         db.prepare(`DELETE FROM dashboard_config`).run();
         db.prepare(`DELETE FROM attachments`).run();
+        db.prepare(`DELETE FROM transaction_tags`).run();
         db.prepare(`DELETE FROM transactions`).run();
         db.prepare(`DELETE FROM budgets`).run();
         db.prepare(`DELETE FROM saved_views`).run();
@@ -228,7 +247,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
                 tx.id, tx.account_id, tx.category, tx.description, tx.amount_cents,
                 tx.type, tx.date, tx.notes, tx.created_at, tx.updated_at, tx.deleted_at,
                 tx.recurrence ?? null, tx.recurrence_end_date ?? null, tx.recurrence_source_id ?? null,
-                tx.transfer_group_id ?? null,
+                tx.transfer_group_id ?? null, tx.cleared_at ?? null,
             );
         }
 
@@ -277,6 +296,16 @@ export function importWipe(payload: BackupPayload): ImportResult {
                 for (const tt of p.transaction_tags) {
                     insertTT.run(tt.transaction_id, tt.tag_id);
                 }
+            }
+        }
+
+        if (Array.isArray(p.reconciliations)) {
+            const insertRecon = db.prepare(
+                `INSERT INTO reconciliations (id, account_id, statement_date, statement_balance_cents, completed_at, notes)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+            );
+            for (const r of p.reconciliations) {
+                insertRecon.run(r.id, r.account_id, r.statement_date, r.statement_balance_cents, r.completed_at, r.notes ?? null);
             }
         }
 

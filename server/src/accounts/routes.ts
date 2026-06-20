@@ -46,6 +46,20 @@ router.post('/', (req, res) => {
     res.status(201).json(account);
 });
 
+router.get('/:id/cleared-balance', (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!repo.findById(id)) {
+        res.status(404).json({ error: 'account not found' });
+        return;
+    }
+    const row = db
+        .prepare(
+            'SELECT COALESCE(SUM(amount_cents), 0) AS cleared_balance_cents FROM transactions WHERE account_id = ? AND cleared_at IS NOT NULL AND deleted_at IS NULL',
+        )
+        .get(id) as { cleared_balance_cents: number };
+    res.json({ cleared_balance_cents: row.cleared_balance_cents });
+});
+
 router.get('/:id', (req, res) => {
     const id = parseInt(req.params.id, 10);
     const account = repo.findById(id);

@@ -38,7 +38,10 @@
       "mcp__serena__get_symbols_overview",
       "mcp__serena__find_symbol",
       "mcp__serena__replace_content",
-      "Bash(xargs -I{} dirname {})"
+      "Bash(xargs -I{} dirname {})",
+      "mcp__serena__initial_instructions",
+      "mcp__serena__replace_symbol_body",
+      "mcp__serena__insert_after_symbol"
     ]
   }
 }
