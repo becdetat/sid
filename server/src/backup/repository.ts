@@ -1,5 +1,5 @@
 import db from '../db';
-import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, BackupTag, BackupTransactionTag, BackupReconciliation, ImportResult } from './types';
+import type { BackupPayload, BackupAccount, BackupTransaction, BackupAttachment, BackupBudget, BackupSavedView, BackupTag, BackupTransactionTag, BackupReconciliation, BackupRule, ImportResult } from './types';
 
 function formatTimestamp(d: Date): string {
     const p = (n: number) => String(n).padStart(2, '0');
@@ -28,8 +28,10 @@ export function exportAll(): BackupPayload {
 
     const reconciliations = db.prepare(`SELECT id, account_id, statement_date, statement_balance_cents, completed_at, notes FROM reconciliations ORDER BY id`).all() as BackupReconciliation[];
 
+    const rules = db.prepare(`SELECT id, name, priority, enabled, account_id, match_type, description_pattern, amount_min_cents, amount_max_cents, tx_type, set_category, add_tag_ids, notes_prefix, last_run_at, last_match_count, created_at, deleted_at FROM rules ORDER BY id`).all() as BackupRule[];
+
     return {
-        version: 5,
+        version: 6,
         exported_at: new Date().toISOString(),
         accounts,
         transactions,
@@ -39,6 +41,7 @@ export function exportAll(): BackupPayload {
         tags,
         transaction_tags,
         reconciliations,
+        rules,
     };
 }
 
@@ -202,6 +205,56 @@ export function importMerge(payload: BackupPayload): ImportResult {
             }
         }
 
+        let rulesImported = 0;
+        if (Array.isArray(p.rules)) {
+            const upsertRule = db.prepare(
+                `INSERT INTO rules (name, priority, enabled, account_id, match_type, description_pattern,
+                    amount_min_cents, amount_max_cents, tx_type, set_category, add_tag_ids, notes_prefix,
+                    last_run_at, last_match_count, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT DO NOTHING`,
+            );
+            // Rebuild tag id map from already-imported tags so we can remap add_tag_ids.
+            const tagIdMap = new Map<number, number>();
+            if (Array.isArray(p.tags)) {
+                const findTagByName = db.prepare(`SELECT id FROM tags WHERE LOWER(name) = LOWER(?) AND deleted_at IS NULL`);
+                for (const tag of p.tags) {
+                    const existing = findTagByName.get(tag.name) as { id: number } | undefined;
+                    if (existing) tagIdMap.set(tag.id, existing.id);
+                }
+            }
+
+            for (const rule of p.rules) {
+                let newAccountId: number | null = null;
+                if (rule.account_id !== null) {
+                    const mapped = accountIdMap.get(rule.account_id);
+                    if (mapped === undefined) continue;
+                    newAccountId = mapped;
+                }
+
+                // Remap add_tag_ids
+                let remappedTagIds: string | null = null;
+                if (rule.add_tag_ids) {
+                    try {
+                        const ids = JSON.parse(rule.add_tag_ids) as number[];
+                        const remapped = ids.map((id) => tagIdMap.get(id) ?? id);
+                        remappedTagIds = JSON.stringify(remapped);
+                    } catch {
+                        remappedTagIds = rule.add_tag_ids;
+                    }
+                }
+
+                upsertRule.run(
+                    rule.name, rule.priority, rule.enabled, newAccountId,
+                    rule.match_type, rule.description_pattern,
+                    rule.amount_min_cents, rule.amount_max_cents, rule.tx_type,
+                    rule.set_category, remappedTagIds, rule.notes_prefix,
+                    rule.last_run_at, rule.last_match_count, rule.created_at, rule.deleted_at,
+                );
+                rulesImported++;
+            }
+        }
+
         return {
             accounts: accountIdMap.size,
             transactions: transactionIdMap.size,
@@ -209,6 +262,7 @@ export function importMerge(payload: BackupPayload): ImportResult {
             budgets: budgetsImported,
             saved_views: savedViewsImported,
             tags: tagsImported,
+            rules: rulesImported,
         };
     });
 
@@ -221,6 +275,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
     const insertAttachment = db.prepare(`INSERT INTO attachments (id, transaction_id, filename, mime_type, size_bytes, data, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 
     const run = db.transaction((p: BackupPayload) => {
+        db.prepare(`DELETE FROM rules`).run();
         db.prepare(`DELETE FROM reconciliations`).run();
         db.prepare(`DELETE FROM dashboard_config`).run();
         db.prepare(`DELETE FROM attachments`).run();
@@ -309,6 +364,26 @@ export function importWipe(payload: BackupPayload): ImportResult {
             }
         }
 
+        let rulesImported = 0;
+        if (Array.isArray(p.rules)) {
+            const insertRule = db.prepare(
+                `INSERT INTO rules (id, name, priority, enabled, account_id, match_type, description_pattern,
+                    amount_min_cents, amount_max_cents, tx_type, set_category, add_tag_ids, notes_prefix,
+                    last_run_at, last_match_count, created_at, deleted_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            );
+            for (const rule of p.rules) {
+                insertRule.run(
+                    rule.id, rule.name, rule.priority, rule.enabled, rule.account_id,
+                    rule.match_type, rule.description_pattern,
+                    rule.amount_min_cents, rule.amount_max_cents, rule.tx_type,
+                    rule.set_category, rule.add_tag_ids, rule.notes_prefix,
+                    rule.last_run_at, rule.last_match_count, rule.created_at, rule.deleted_at,
+                );
+                rulesImported++;
+            }
+        }
+
         return {
             accounts: p.accounts.length,
             transactions: p.transactions.length,
@@ -316,6 +391,7 @@ export function importWipe(payload: BackupPayload): ImportResult {
             budgets: budgetsImported,
             saved_views: savedViewsImported,
             tags: tagsImported,
+            rules: rulesImported,
         };
     });
 

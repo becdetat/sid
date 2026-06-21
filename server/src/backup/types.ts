@@ -72,6 +72,26 @@ export interface BackupTransactionTag {
     tag_id: number;
 }
 
+export interface BackupRule {
+    id: number;
+    name: string;
+    priority: number;
+    enabled: number;
+    account_id: number | null;
+    match_type: 'substring' | 'regex';
+    description_pattern: string | null;
+    amount_min_cents: number | null;
+    amount_max_cents: number | null;
+    tx_type: 'income' | 'expense' | 'transfer' | null;
+    set_category: string | null;
+    add_tag_ids: string | null;
+    notes_prefix: string | null;
+    last_run_at: string | null;
+    last_match_count: number;
+    created_at: string;
+    deleted_at: string | null;
+}
+
 export interface BackupReconciliation {
     id: number;
     account_id: number;
@@ -92,6 +112,7 @@ export interface BackupPayload {
     tags?: BackupTag[];
     transaction_tags?: BackupTransactionTag[];
     reconciliations?: BackupReconciliation[];
+    rules?: BackupRule[];
 }
 
 export interface ImportResult {
@@ -101,4 +122,5 @@ export interface ImportResult {
     budgets: number;
     saved_views: number;
     tags: number;
+    rules: number;
 }

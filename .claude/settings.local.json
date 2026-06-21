@@ -41,7 +41,10 @@
       "Bash(xargs -I{} dirname {})",
       "mcp__serena__initial_instructions",
       "mcp__serena__replace_symbol_body",
-      "mcp__serena__insert_after_symbol"
+      "mcp__serena__insert_after_symbol",
+      "Bash(DATABASE_PATH=:memory: npx tap server/src/rules/routes.test.ts)",
+      "Bash(DATABASE_PATH=:memory: npx tap server/src/**/*.test.ts)",
+      "Bash(DATABASE_PATH=:memory: npx tap 'server/src/**/*.test.ts')"
     ]
   }
 }

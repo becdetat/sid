@@ -6,6 +6,7 @@ import BudgetsSection from '../components/settings/BudgetsSection';
 import ImportExportSection from '../components/settings/ImportExportSection';
 import TagsSection from '../components/settings/TagsSection';
 import ReconciliationHistorySection from '../components/settings/ReconciliationHistorySection';
+import RulesSection from '../components/settings/RulesSection';
 import { Page } from '../components/Page';
 import PageLink from '../components/PageLink';
 
@@ -14,6 +15,7 @@ const navItems = [
     { label: 'Dashboard', key: 'dashboard' },
     { label: 'Budgets', key: 'budgets' },
     { label: 'Tags', key: 'tags' },
+    { label: 'Rules', key: 'rules' },
     { label: 'Import / Export', key: 'import-export' },
     { label: 'Reconciliation', key: 'reconciliation' },
 ] as const;
@@ -58,6 +60,7 @@ export default function Settings() {
                     {section === 'dashboard' && <DashboardSection />}
                     {section === 'budgets' && <BudgetsSection />}
                     {section === 'tags' && <TagsSection />}
+                    {section === 'rules' && <RulesSection />}
                     {section === 'import-export' && <ImportExportSection />}
                     {section === 'reconciliation' && <ReconciliationHistorySection />}
                 </div>

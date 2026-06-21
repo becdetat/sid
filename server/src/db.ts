@@ -236,5 +236,28 @@ db.exec(`
     );
 `);
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS rules (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        name                TEXT NOT NULL,
+        priority            INTEGER NOT NULL DEFAULT 100,
+        enabled             INTEGER NOT NULL DEFAULT 1,
+        account_id          INTEGER REFERENCES accounts(id),
+        match_type          TEXT NOT NULL DEFAULT 'substring' CHECK(match_type IN ('substring','regex')),
+        description_pattern TEXT,
+        amount_min_cents    INTEGER,
+        amount_max_cents    INTEGER,
+        tx_type             TEXT CHECK(tx_type IN ('income','expense','transfer') OR tx_type IS NULL),
+        set_category        TEXT,
+        add_tag_ids         TEXT,
+        notes_prefix        TEXT,
+        last_run_at         DATETIME,
+        last_match_count    INTEGER NOT NULL DEFAULT 0,
+        created_at          DATETIME NOT NULL DEFAULT (datetime('now')),
+        deleted_at          DATETIME
+    );
+`);
+
 export default db;
+
 

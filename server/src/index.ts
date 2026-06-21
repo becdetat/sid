@@ -23,6 +23,7 @@ import budgetRoutes from './budgets/routes';
 import savedViewRoutes from './saved-views/routes';
 import transferRoutes from './transfers/routes';
 import reconciliationRoutes from './reconciliations/routes';
+import rulesRoutes from './rules/routes';
 
 const app = express();
 const PORT = 3000;
@@ -34,6 +35,7 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
 
+app.use('/api/rules', rulesRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/transactions/bulk-tag', bulkTagRouter);
 app.use('/api/transactions/search', transactionSearchRoutes);

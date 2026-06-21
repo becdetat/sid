@@ -7,6 +7,8 @@ import { parseImportCSV } from './csv';
 import type { ImportRow, DateFormat } from './csv';
 import previewRoutes from './previewRoutes';
 import type { PreviewAction } from './previewRoutes';
+import { list as listRules } from '../rules/repository';
+import { applyRules } from '../rules/service';
 
 const router = Router({ mergeParams: true });
 const upload = multer({ storage: multer.memoryStorage() });
@@ -58,18 +60,37 @@ router.post('/', upload.single('file'), (req, res) => {
         return;
     }
 
+    const rules = listRules();
+
     const insertAll = db.transaction((rows: ImportRow[]) => {
         for (const row of rows) {
-            create({
+            const amount_cents = Math.round(row.amount * 100) * (row.type === 'expense' ? -1 : 1);
+            const ruleResult = applyRules(
+                { description: row.description, amount_cents, type: row.type, account_id: accountId },
+                rules,
+            );
+            const category = ruleResult.category ?? row.category;
+            const notes = ruleResult.notesPrefix
+                ? (ruleResult.notesPrefix + (row.notes ? ' ' + row.notes : '')).trim()
+                : row.notes ?? undefined;
+
+            const tx = create({
                 account_id: accountId,
-                category: row.category,
+                category,
                 description: row.description,
                 amount: row.amount,
                 type: row.type,
                 date: row.date,
-                notes: row.notes ?? undefined,
+                notes,
                 transfer_group_id: row.transfer_group_id ?? undefined,
             });
+
+            if (ruleResult.tagIds.length > 0) {
+                const insertTag = db.prepare('INSERT OR IGNORE INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?)');
+                for (const tagId of ruleResult.tagIds) {
+                    insertTag.run(tx.id, tagId);
+                }
+            }
         }
     });
 
@@ -124,6 +145,9 @@ router.post('/commit', (req, res) => {
     let skipped = 0;
     let updated = 0;
 
+    const commitRules = listRules();
+    const insertTag = db.prepare('INSERT OR IGNORE INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?)');
+
     const applyAll = db.transaction((rowsToApply: CommitRow[]) => {
         for (const row of rowsToApply) {
             if (row.action === 'skip') {
@@ -135,16 +159,28 @@ router.post('/commit', (req, res) => {
             const category = row.category?.trim() || undefined;
 
             if (row.action === 'import') {
-                create({
+                const ruleResult = applyRules(
+                    { description: row.description, amount_cents: row.amount_cents, type: row.type, account_id: accountId },
+                    commitRules,
+                );
+                const effectiveNotes = ruleResult.notesPrefix
+                    ? (ruleResult.notesPrefix + (row.notes ? ' ' + row.notes : '')).trim()
+                    : row.notes ?? undefined;
+
+                const tx = create({
                     account_id: accountId,
                     category,
                     description: row.description,
                     amount,
                     type: row.type,
                     date: row.date,
-                    notes: row.notes ?? undefined,
+                    notes: effectiveNotes,
                     transfer_group_id: row.transfer_group_id ?? undefined,
                 });
+
+                for (const tagId of ruleResult.tagIds) {
+                    insertTag.run(tx.id, tagId);
+                }
                 imported++;
             } else if (row.action === 'update_existing') {
                 // Date is intentionally left untouched — the existing transaction's date is kept.

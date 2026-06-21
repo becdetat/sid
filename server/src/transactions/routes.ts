@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as repo from './repository';
 import * as tagRepo from '../tags/repository';
 import { findById as findAccount } from '../accounts/repository';
+import { list as listRules } from '../rules/repository';
+import { applyRules } from '../rules/service';
 
 export function parseFilters(query: Record<string, unknown>): repo.TransactionFilters {
     const { keyword, from, to, category, type, amountMin, amountMax, hasAttachment, recurringOnly, tagIds, tagMode, cleared } = query;
@@ -107,9 +109,25 @@ router.post<{ accountId: string }>('/', (req, res) => {
         recurrence: recurrence as repo.RecurrenceFrequency | undefined,
         recurrence_end_date: recurrence_end_date || undefined,
     });
-    if (Array.isArray(tag_ids) && tag_ids.length > 0) {
-        tagRepo.setTagsForTransaction(transaction.id, tag_ids);
+
+    // Apply rules for tags and notes prefix (category already set by user — not overridden).
+    const ruleResult = applyRules(
+        { description: transaction.description, amount_cents: transaction.amount_cents, type: transaction.type, account_id: accountId },
+        listRules(),
+    );
+    const effectiveTagIds = Array.isArray(tag_ids) && tag_ids.length > 0
+        ? [...new Set([...tag_ids, ...ruleResult.tagIds])]
+        : ruleResult.tagIds;
+    if (effectiveTagIds.length > 0) {
+        tagRepo.setTagsForTransaction(transaction.id, effectiveTagIds);
     }
+    if (ruleResult.notesPrefix) {
+        const existing = transaction.notes ?? '';
+        if (!existing.startsWith(ruleResult.notesPrefix)) {
+            repo.update(transaction.id, { notes: (ruleResult.notesPrefix + (existing ? ' ' + existing : '')).trim() });
+        }
+    }
+
     res.status(201).json(repo.findById(transaction.id));
 });
 

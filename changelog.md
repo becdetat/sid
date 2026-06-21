@@ -1,11 +1,14 @@
 # Sid Changelog
 
-## 0.TBA
+## 0.2.0
 
-**Release date**: TBA
+**Release date**: 2026-06-21
 
 - Improve touch experience for editing/deleting transactions
 - Fix footer
+- Smart imports to account
+- Account reconcilliation
+- Rules engine
 
 ## 0.1.24
 

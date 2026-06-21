@@ -6,6 +6,8 @@ import { parseImportCSV } from './csv';
 import type { DateFormat, ImportRow } from './csv';
 import { findDuplicates, findWithinBatchDuplicates } from './duplicates';
 import { buildTokenCategoryMap, suggestCategory } from './suggester';
+import { list as listRules, type Rule } from '../rules/repository';
+import { applyRules } from '../rules/service';
 
 const router = Router({ mergeParams: true });
 const upload = multer({ storage: multer.memoryStorage() });
@@ -23,6 +25,8 @@ export interface PreviewRow {
     transfer_group_id: string | null;
     suggested_category: string | null;
     suggested_category_confidence: number;
+    rule_applied: boolean;
+    rule_tag_ids: number[];
     duplicate_of: number | null;
     duplicate_within_batch: boolean;
     action: PreviewAction;
@@ -32,6 +36,7 @@ export interface PreviewSummary {
     total: number;
     duplicates: number;
     categorised: number;
+    rules_applied: number;
 }
 
 router.post('/', upload.single('file'), (req, res) => {
@@ -89,18 +94,39 @@ router.post('/', upload.single('file'), (req, res) => {
     const duplicateIds = findDuplicates(accountId, candidateRows);
     const withinBatch = findWithinBatchDuplicates(candidateRows);
     const tokenMap = buildTokenCategoryMap(accountId);
+    const rules: Rule[] = listRules();
 
     let duplicates = 0;
     let categorised = 0;
+    let rulesAppliedCount = 0;
 
     const rows: PreviewRow[] = result.rows.map((row, i) => {
         const duplicateOf = duplicateIds[i];
         const isWithinBatchDup = withinBatch[i];
         if (duplicateOf !== null) duplicates++;
 
-        // A row that already came in with a category doesn't need a suggestion.
-        const suggestion = row.category ? { category: null, confidence: 0 } : suggestCategory(row.description, tokenMap);
-        if (suggestion.category) categorised++;
+        // Apply rules first; they take precedence over the statistical suggester.
+        const ruleResult = applyRules(
+            { description: row.description, amount_cents: candidateRows[i].amount_cents, type: row.type, account_id: accountId },
+            rules,
+        );
+        const ruleApplied = ruleResult.category !== null || ruleResult.tagIds.length > 0 || ruleResult.notesPrefix !== null;
+        if (ruleApplied) rulesAppliedCount++;
+
+        let suggestedCategory: string | null = null;
+        let suggestedConfidence = 0;
+
+        if (ruleResult.category) {
+            suggestedCategory = ruleResult.category;
+            suggestedConfidence = 1;
+        } else if (!row.category) {
+            // Fall back to statistical suggester only when neither CSV nor rules supplied a category.
+            const suggestion = suggestCategory(row.description, tokenMap);
+            suggestedCategory = suggestion.category;
+            suggestedConfidence = suggestion.confidence;
+        }
+
+        if (suggestedCategory) categorised++;
 
         const action: PreviewAction = duplicateOf !== null || isWithinBatchDup ? 'skip' : 'import';
 
@@ -113,15 +139,17 @@ router.post('/', upload.single('file'), (req, res) => {
             type: row.type,
             notes: row.notes,
             transfer_group_id: row.transfer_group_id,
-            suggested_category: suggestion.category,
-            suggested_category_confidence: suggestion.confidence,
+            suggested_category: suggestedCategory,
+            suggested_category_confidence: suggestedConfidence,
+            rule_applied: ruleApplied,
+            rule_tag_ids: ruleResult.tagIds,
             duplicate_of: duplicateOf,
             duplicate_within_batch: isWithinBatchDup,
             action,
         };
     });
 
-    const summary: PreviewSummary = { total: rows.length, duplicates, categorised };
+    const summary: PreviewSummary = { total: rows.length, duplicates, categorised, rules_applied: rulesAppliedCount };
     res.json({ rows, summary });
 });
 
